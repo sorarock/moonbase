@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Investment Portfolio Management System">
+    <title>Portfolio Manager</title>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/pages.css">
+    
+    <!-- External Libraries via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Portfolio Manager...</p>
+        </div>
+    </div>
+
+    <!-- Login/Setup Screen -->
+    <div id="authScreen" class="auth-screen hidden">
+        <!-- First Time Setup -->
+        <div id="setupWizard" class="auth-card hidden">
+            <div class="auth-header">
+                <h1>Welcome to Portfolio Manager</h1>
+                <p>Let's set up your master password to protect your investment data</p>
+            </div>
+            
+            <form id="setupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="setupPassword" class="form-label">Create Master Password</label>
+                    <div class="input-with-icon">
+                        <input 
+                            type="password" 
+                            id="setupPassword" 
+                            class="input-field"
+                            placeholder="Enter a strong password"
+                            required
+                            minlength="8"
+                            autocomplete="new-password"
+                        />
+                        <button type="button" class="btn-icon" onclick="togglePasswordVisibility('setupPassword')">
+                            👁️
+                        </button>
+                    </div>
+                    <small class="form-hint">Minimum 8 characters recommended</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="passwordHint" class="form-label">Password Hint (Optional)</label>
+                    <input 
+                        type="text" 
+                        id="passwordHint" 
+                        class="input-field"
+                        placeholder="e.g., My first car"
+                        autocomplete="off"
+                    />
+                    <small class="form-hint">This will help you remember your password</small>
+                </div>
+                
+                <div class="security-warning">
+                    <p>⚠️ <strong>Important:</strong> If you lose your password, you will lose access to all your data. There is no password recovery option.</p>
+                </div>
+                
+                <button type="submit" class="btn-primary btn-block">
+                    Create Password & Continue
+                </button>
+            </form>
+        </div>
+
+        <!-- Login Screen -->
+        <div id="loginScreen" class="auth-card hidden">
+            <div class="auth-header">
+                <h1>Portfolio Manager</h1>
+                <p>Enter your password to continue</p>
+            </div>
+            
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginPassword" class="form-label">Master Password</label>
+                    <div class="input-with-icon">
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            class="input-field"
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                            autofocus
+                        />
+                        <button type="button" class="btn-icon" onclick="togglePasswordVisibility('loginPassword')">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe">
+                        <span>Remember me for 7 days</span>
+                    </label>
+                </div>
+                
+                <div id="loginError" class="error-message hidden"></div>
+                
+                <button type="submit" class="btn-primary btn-block">
+                    Unlock
+                </button>
+                
+                <a href="#" id="showHintLink" class="text-link hidden">Show password hint</a>
+                <div id="hintDisplay" class="hint-display hidden"></div>
+            </form>
+            
+            <div class="auth-footer">
+                <a href="#" id="factoryResetLink" class="text-link-danger">Factory Reset</a>
+            </div>
+        </div>
+
+        <!-- Lockout Screen -->
+        <div id="lockoutScreen" class="auth-card hidden">
+            <div class="auth-header">
+                <h1>⏱️ Account Locked</h1>
+                <p>Too many failed login attempts</p>
+            </div>
+            <div class="lockout-message">
+                <p>Please wait <strong><span id="lockoutTimer">5:00</span></strong> before trying again.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app-container hidden">
+        <!-- Navigation Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="app-title">Portfolio Manager</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn-icon" id="syncButton" title="Sync to Cloud">
+                        ☁️
+                    </button>
+                    <button class="btn-icon" id="settingsButton" title="Settings">
+                        ⚙️
+                    </button>
+                    <button class="btn-icon" id="lockButton" title="Lock">
+                        🔒
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Navigation -->
+        <nav class="main-nav">
+            <div class="nav-content">
+                <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                    📊 Dashboard
+                </a>
+                <a href="#portfolios" class="nav-link" data-page="portfolios">
+                    💼 Portfolios
+                </a>
+                <a href="#accounts" class="nav-link" data-page="accounts">
+                    🏦 Accounts
+                </a>
+                <a href="#transactions" class="nav-link" data-page="transactions">
+                    💰 Transactions
+                </a>
+                <a href="#reports" class="nav-link" data-page="reports">
+                    📑 Reports
+                </a>
+                
+                <!-- Global As Of Date Control -->
+                <div class="as-of-date-control" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                    <label style="font-size: 12px; color: var(--color-text-secondary);">View As Of:</label>
+                    <input type="date" id="globalAsOfDate" class="input-field" 
+                           style="width: 140px; padding: 4px 8px; font-size: 12px;" />
+                    <button class="btn-secondary btn-sm" onclick="App.resetAsOfDateToToday()" style="padding: 4px 8px; font-size: 12px;">
+                        Today
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- As Of Date Banner (Hidden by default, shown when not viewing today) -->
+        <div id="asOfDateBanner" style="display: none; background: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%); color: white; padding: 12px 24px; text-align: center; font-size: 14px; border-bottom: 2px solid rgba(255, 255, 255, 0.3);">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                <span style="font-size: 18px;">📅</span>
+                <span>
+                    <strong>Historical View:</strong> Viewing data as of 
+                    <strong id="asOfDateDisplay"></strong>
+                </span>
+                <span id="futureTransactionCount" style="opacity: 0.9;"></span>
+                <button class="btn-secondary btn-sm" onclick="App.resetAsOfDateToToday()" 
+                        style="background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 4px 12px; font-size: 12px;">
+                    Return to Today
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div id="pageContent">
+                <!-- Dashboard Page (Default) -->
+                <div id="dashboardPage" class="page active">
+                    <div class="page-header">
+                        <h2>Dashboard</h2>
+                        <p class="page-subtitle">Overview of your investment portfolios</p>
+                    </div>
+                    
+                    <!-- Portfolio Filter -->
+                    <div id="dashboardFilter" class="card card-ultra-compact" style="margin-bottom: var(--space-md); display: none;">
+                        <div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                            <div style="font-weight: 600; font-size: 14px;">Filter by Portfolio:</div>
+                            <div id="portfolioFilterOptions" style="display: flex; gap: var(--space-sm); flex-wrap: wrap; flex: 1;">
+                                <!-- Filter checkboxes will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Exchange Rate Settings -->
+                    <div id="exchangeRateSettings" class="card card-ultra-compact" style="margin-bottom: var(--space-md); display: none;">
+                        <div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                            <div style="font-weight: 600; font-size: 14px;">Exchange Rate:</div>
+                            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                                <span style="font-size: 14px;">1 USD =</span>
+                                <input 
+                                    type="number" 
+                                    id="exchangeRateInput" 
+                                    class="input-field" 
+                                    style="width: 100px; padding: 4px 8px; font-size: 14px;"
+                                    placeholder="35.00"
+                                    step="0.01"
+                                    min="0.01"
+                                />
+                                <span style="font-size: 14px;">THB</span>
+                            </div>
+                            <button class="btn-secondary btn-sm" onclick="updateExchangeRate()" style="padding: 4px 12px;">
+                                Update
+                            </button>
+                            <div id="exchangeRateInfo" style="font-size: 12px; color: var(--color-text-secondary); margin-left: auto;">
+                                <!-- Last updated info will be shown here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Cards -->
+                    <div id="dashboardSummary" class="dashboard-grid" style="gap: var(--space-md); margin-bottom: var(--space-xl);">
+                        <!-- Summary cards will be loaded here -->
+                    </div>
+                    
+                    <!-- Charts Section -->
+                    <div id="dashboardCharts" class="dashboard-grid" style="gap: var(--space-md); margin-bottom: var(--space-xl); grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
+                        <!-- Charts will be loaded here -->
+                    </div>
+                    
+                    <!-- Portfolio Overview -->
+                    <div id="dashboardPortfolios" style="margin-bottom: var(--space-xl);">
+                        <!-- Portfolio overview will be loaded here -->
+                    </div>
+                    
+                    <!-- Recent Transactions -->
+                    <div id="dashboardTransactions">
+                        <!-- Recent transactions will be loaded here -->
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="dashboardEmptyState" class="empty-state hidden">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>Welcome to Portfolio Manager!</h3>
+                        <p>Start by creating your first portfolio to track your investments</p>
+                        <button class="btn-primary" onclick="navigateToPage('portfolios')">
+                            Create Portfolio
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Portfolios Page -->
+                <div id="portfoliosPage" class="page">
+                    <div class="page-header">
+                        <h2>Portfolios</h2>
+                        <p class="page-subtitle">Create and manage your investment portfolios</p>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--space-xl);">
+                        <button class="btn-primary" onclick="showCreatePortfolioModal()">
+                            ➕ Create Portfolio
+                        </button>
+                    </div>
+
+                    <div id="portfolioList" class="portfolio-list">
+                        <!-- Portfolio cards will be loaded here -->
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="portfoliosEmptyState" class="empty-state hidden">
+                        <div class="empty-state-icon">💼</div>
+                        <h3>No Portfolios Yet</h3>
+                        <p>Create your first portfolio to start tracking your investments</p>
+                        <button class="btn-primary" onclick="showCreatePortfolioModal()">
+                            Create Portfolio
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Accounts Page -->
+                <div id="accountsPage" class="page">
+                    <div class="page-header">
+                        <h2>Accounts</h2>
+                        <p class="page-subtitle">Manage your savings accounts and track balances</p>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--space-xl);">
+                        <button class="btn-primary" onclick="showCreateAccountModal()">
+                            ➕ Create Account
+                        </button>
+                    </div>
+
+                    <div id="accountsList" class="dashboard-grid">
+                        <!-- Account cards will be loaded here -->
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="accountsEmptyState" class="empty-state hidden">
+                        <div class="empty-state-icon">🏦</div>
+                        <h3>No Accounts Yet</h3>
+                        <p>Create your first account to start tracking your savings and investments</p>
+                        <button class="btn-primary" onclick="showCreateAccountModal()">
+                            Create Account
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transactions Page -->
+                <div id="transactionsPage" class="page">
+                    <div class="page-header">
+                        <h2>Transactions</h2>
+                        <p class="page-subtitle">Record and track your investment transactions</p>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--space-xl);">
+                        <button class="btn-primary" onclick="showRecordTransactionModal()">
+                            ➕ Record Transaction
+                        </button>
+                    </div>
+
+                    <!-- Transaction Filters -->
+                    <div class="card card-ultra-compact" style="margin-bottom: var(--space-sm);">
+                        <div style="font-weight: 600; margin-bottom: var(--space-sm);">Filters</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="filterPortfolio" class="form-label">Portfolio</label>
+                                <select id="filterPortfolio" class="select-field" onchange="App.loadTransactions()">
+                                    <option value="">All Portfolios</option>
+                                    <!-- Options loaded dynamically -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filterType" class="form-label">Type</label>
+                                <select id="filterType" class="select-field" onchange="App.loadTransactions()">
+                                    <option value="">All Types</option>
+                                    <option value="BUY">Buy</option>
+                                    <option value="SELL">Sell</option>
+                                    <option value="DIVIDEND">Dividend</option>
+                                    <option value="DEPOSIT">Deposit</option>
+                                    <option value="WITHDRAW">Withdraw</option>
+                                    <option value="INTEREST">Interest</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filterStartDate" class="form-label">Start Date</label>
+                                <input type="date" id="filterStartDate" class="input-field" onchange="App.loadTransactions()" />
+                            </div>
+                            <div class="form-group">
+                                <label for="filterEndDate" class="form-label">End Date</label>
+                                <input type="date" id="filterEndDate" class="input-field" onchange="App.loadTransactions()" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Statistics -->
+                    <div id="transactionStats" class="dashboard-grid" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+                        <!-- Stats cards loaded dynamically -->
+                    </div>
+
+                    <!-- Transaction List -->
+                    <div id="transactionList">
+                        <!-- Transactions will be loaded here -->
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="transactionsEmptyState" class="empty-state hidden">
+                        <div class="empty-state-icon">💰</div>
+                        <h3>No Transactions Yet</h3>
+                        <p>Record your first investment transaction to start tracking</p>
+                        <button class="btn-primary" onclick="showRecordTransactionModal()">
+                            Record Transaction
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Planning Page -->
+                <div id="planningPage" class="page">
+                    <div class="page-header">
+                        <h2>Investment Planning</h2>
+                        <p class="page-subtitle">Plan your investment strategy with DCA Calculator</p>
+                    </div>
+                    
+                    <!-- DCA Calculator Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>💰 Dollar Cost Averaging (DCA) Calculator</h3>
+                            <p class="text-secondary">Plan your systematic investment strategy</p>
+                        </div>
+
+                        <!-- Input Form -->
+                        <form id="dcaCalculatorForm" style="margin-bottom: var(--space-xl);">
+                            <h4 style="margin-bottom: var(--space-md);">Investment Parameters</h4>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="dcaPortfolio" class="form-label">Portfolio *</label>
+                                    <select id="dcaPortfolio" class="select-field" required onchange="updateDCAAssets()">
+                                        <option value="">Select Portfolio</option>
+                                        <!-- Options loaded dynamically -->
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dcaAsset" class="form-label">Asset *</label>
+                                    <select id="dcaAsset" class="select-field" required>
+                                        <option value="">Select Asset</option>
+                                        <!-- Options loaded dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="dcaAmount" class="form-label">Investment Amount *</label>
+                                    <input 
+                                        type="number" 
+                                        id="dcaAmount" 
+                                        class="input-field"
+                                        placeholder="5000"
+                                        step="100"
+                                        min="100"
+                                        required
+                                    />
+                                    <small class="form-hint">Amount to invest per period</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dcaFrequency" class="form-label">Frequency *</label>
+                                    <select id="dcaFrequency" class="select-field" required>
+                                        <option value="weekly">Weekly</option>
+                                        <option value="monthly" selected>Monthly</option>
+                                        <option value="quarterly">Quarterly</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="dcaDuration" class="form-label">Duration (Months) *</label>
+                                    <input 
+                                        type="number" 
+                                        id="dcaDuration" 
+                                        class="input-field"
+                                        placeholder="12"
+                                        min="1"
+                                        max="120"
+                                        value="12"
+                                        required
+                                    />
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dcaStartDate" class="form-label">Start Date *</label>
+                                    <input 
+                                        type="date" 
+                                        id="dcaStartDate" 
+                                        class="input-field"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <h4 style="margin-bottom: var(--space-md);">Price Simulation</h4>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="dcaStartPrice" class="form-label">Starting Price *</label>
+                                    <input 
+                                        type="number" 
+                                        id="dcaStartPrice" 
+                                        class="input-field"
+                                        placeholder="450.00"
+                                        step="0.01"
+                                        min="0.01"
+                                        required
+                                    />
+                                    <small class="form-hint">Current or expected price</small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dcaCurrency" class="form-label">Currency</label>
+                                    <input 
+                                        type="text" 
+                                        id="dcaCurrency" 
+                                        class="input-field"
+                                        value="USD"
+                                        readonly
+                                        style="background: var(--color-background-gray);"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="dcaChangeMin" class="form-label">Expected Change (Min %) *</label>
+                                    <input 
+                                        type="number" 
+                                        id="dcaChangeMin" 
+                                        class="input-field"
+                                        placeholder="-5"
+                                        step="0.1"
+                                        value="-5"
+                                        required
+                                    />
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dcaChangeMax" class="form-label">Expected Change (Max %) *</label>
+                                    <input 
+                                        type="number" 
+                                        id="dcaChangeMax" 
+                                        class="input-field"
+                                        placeholder="10"
+                                        step="0.1"
+                                        value="10"
+                                        required
+                                    />
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="dcaVolatility" class="form-label">Volatility (±%) *</label>
+                                    <input 
+                                        type="number" 
+                                        id="dcaVolatility" 
+                                        class="input-field"
+                                        placeholder="15"
+                                        step="0.1"
+                                        value="15"
+                                        min="0"
+                                        required
+                                    />
+                                    <small class="form-hint">Price variation per period</small>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary" style="margin-top: var(--space-lg);">
+                                📊 Calculate DCA Strategy
+                            </button>
+                        </form>
+
+                        <!-- Results Section -->
+                        <div id="dcaResults" style="display: none;">
+                            <div class="divider"></div>
+                            
+                            <h4 style="margin-bottom: var(--space-md);">Results</h4>
+
+                            <!-- Summary Cards -->
+                            <div class="dashboard-grid" style="margin-bottom: var(--space-xl);">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Invested</div>
+                                    <div class="stat-value" id="dcaTotalInvested">-</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Shares</div>
+                                    <div class="stat-value" id="dcaTotalShares">-</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Avg Cost/Share</div>
+                                    <div class="stat-value" id="dcaAvgCost">-</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Current Value</div>
+                                    <div class="stat-value" id="dcaCurrentValue">-</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Gain/Loss</div>
+                                    <div class="stat-value" id="dcaGainLoss">-</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">Return %</div>
+                                    <div class="stat-value" id="dcaReturn">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Comparison Chart -->
+                            <div class="card" style="margin-bottom: var(--space-xl);">
+                                <h4 style="margin-bottom: var(--space-md);">DCA vs Lump Sum Comparison</h4>
+                                <canvas id="dcaComparisonChart" height="100"></canvas>
+                            </div>
+
+                            <!-- Strategy Comparison Table -->
+                            <div class="card" style="margin-bottom: var(--space-xl);">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Strategy</th>
+                                            <th>Total Invested</th>
+                                            <th>Final Value</th>
+                                            <th>Gain/Loss</th>
+                                            <th>Return %</th>
+                                            <th>Risk Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="comparisonTableBody">
+                                        <!-- Rows will be populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Recommendation -->
+                            <div class="alert alert-info" id="dcaRecommendation" style="margin-bottom: var(--space-xl);">
+                                <strong>💡 Recommendation:</strong>
+                                <p id="recommendationText"></p>
+                            </div>
+
+                            <!-- Purchase Timeline -->
+                            <details style="margin-bottom: var(--space-xl);">
+                                <summary style="cursor: pointer; font-weight: 600; padding: var(--space-md); background: var(--color-background-gray); border-radius: var(--radius-md);">
+                                    📅 View Purchase Timeline
+                                </summary>
+                                <div id="purchaseTimeline" style="margin-top: var(--space-md); max-height: 400px; overflow-y: auto;">
+                                    <!-- Timeline will be populated -->
+                                </div>
+                            </details>
+
+                            <!-- Scenario Analysis -->
+                            <details>
+                                <summary style="cursor: pointer; font-weight: 600; padding: var(--space-md); background: var(--color-background-gray); border-radius: var(--radius-md);">
+                                    🎯 View Scenario Analysis
+                                </summary>
+                                <div id="scenarioAnalysis" style="margin-top: var(--space-md);">
+                                    <!-- Scenarios will be populated -->
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="planningEmptyState" class="empty-state">
+                        <div class="empty-state-icon">💼</div>
+                        <h3>No Portfolios Available</h3>
+                        <p>Create a portfolio first to use the DCA Calculator</p>
+                        <button class="btn-primary" onclick="navigateToPage('portfolios')">
+                            Create Portfolio
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reportsPage" class="page">
+                    <div class="page-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-md);">
+                            <div>
+                                <h2>Reports & Analysis</h2>
+                                <p class="page-subtitle">IRR/XIRR Performance Metrics</p>
+                            </div>
+                            <div style="display: flex; gap: var(--space-sm);">
+                                <button class="btn-secondary" onclick="ImportManager.importFromExcel()" style="white-space: nowrap;">
+                                    📥 Import from Excel
+                                </button>
+                                <button class="btn-primary" onclick="ExportManager.exportToExcel()" style="white-space: nowrap;">
+                                    📊 Export to Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Portfolio Selector -->
+                    <div class="card card-ultra-compact" style="margin-bottom: var(--space-lg);">
+                        <div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                            <label style="font-weight: 600; font-size: 14px;">Select Portfolio:</label>
+                            <select id="reportsPortfolioSelect" class="select-field" style="flex: 1; max-width: 300px;" onchange="loadReportsForPortfolio()">
+                                <option value="">Select Portfolio</option>
+                                <!-- Options loaded dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Reports Content -->
+                    <div id="reportsContent" style="display: none;">
+                        <!-- Timeline Chart Section -->
+                        <div class="card" style="margin-bottom: var(--space-xl);">
+                            <!-- Title Row with Timeframe Buttons -->
+                            <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md); flex-wrap: wrap;">
+                                <h3 style="margin: 0;">📈 Portfolio Value Over Time</h3>
+                                <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+                                    <button class="btn-secondary btn-sm timeframe-btn active" data-timeframe="1M" onclick="changeTimeframe('1M')">
+                                        1M
+                                    </button>
+                                    <button class="btn-secondary btn-sm timeframe-btn" data-timeframe="3M" onclick="changeTimeframe('3M')">
+                                        3M
+                                    </button>
+                                    <button class="btn-secondary btn-sm timeframe-btn" data-timeframe="6M" onclick="changeTimeframe('6M')">
+                                        6M
+                                    </button>
+                                    <button class="btn-secondary btn-sm timeframe-btn" data-timeframe="1Y" onclick="changeTimeframe('1Y')">
+                                        1Y
+                                    </button>
+                                    <button class="btn-secondary btn-sm timeframe-btn" data-timeframe="YTD" onclick="changeTimeframe('YTD')">
+                                        YTD
+                                    </button>
+                                    <button class="btn-secondary btn-sm timeframe-btn" data-timeframe="ALL" onclick="changeTimeframe('ALL')">
+                                        ALL
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Granularity Selector and Legend -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: var(--space-md);">
+                                <div style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
+                                    <span style="font-size: 14px; font-weight: 600; color: var(--color-text-secondary);">Group by:</span>
+                                    <button class="btn-primary btn-sm granularity-btn active" data-granularity="day" onclick="changeGranularity('day')">
+                                        Day
+                                    </button>
+                                    <button class="btn-secondary btn-sm granularity-btn" data-granularity="week" onclick="changeGranularity('week')">
+                                        Week
+                                    </button>
+                                    <button class="btn-secondary btn-sm granularity-btn" data-granularity="month" onclick="changeGranularity('month')">
+                                        Month
+                                    </button>
+                                    <button class="btn-secondary btn-sm granularity-btn" data-granularity="year" onclick="changeGranularity('year')">
+                                        Year
+                                    </button>
+                                </div>
+                                
+                                <!-- Color Legend -->
+                                <div style="display: flex; gap: var(--space-md); font-size: 13px; color: var(--color-text-secondary);">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="display: inline-block; width: 16px; height: 3px; background: #007AFF; border-radius: 2px;"></span>
+                                        <span>Portfolio Value</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="display: inline-block; width: 16px; height: 3px; background: #FF9500; border-radius: 2px; opacity: 0.8;"></span>
+                                        <span>Total Deposits</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="position: relative; height: 400px;">
+                                <canvas id="timelineChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- IRR/XIRR Metrics Section -->
+                        <div class="card" style="margin-bottom: var(--space-xl);">
+                            <h3 style="margin-bottom: var(--space-lg);">📊 Investment Return Analysis (XIRR)</h3>
+                            
+                            <div id="irrMetricsContent">
+                                <!-- IRR metrics will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Cash Flow Timeline Section -->
+                        <div class="card" style="margin-bottom: var(--space-xl);">
+                            <details>
+                                <summary style="cursor: pointer; font-weight: 600; padding: var(--space-md); background: var(--color-background-gray); border-radius: var(--radius-md); list-style: none;">
+                                    <span style="font-size: 16px;">📅 Cash Flow Timeline</span>
+                                    <span style="float: right; font-size: 12px; color: var(--color-text-secondary);">Click to expand</span>
+                                </summary>
+                                <div id="cashFlowTimeline" style="margin-top: var(--space-lg);">
+                                    <!-- Cash flow table will be populated -->
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="reportsEmptyState" class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>No Portfolios Available</h3>
+                        <p>Create a portfolio first to view performance reports</p>
+                        <button class="btn-primary" onclick="navigateToPage('portfolios')">
+                            Create Portfolio
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Create Portfolio Modal -->
+        <div id="createPortfolioModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 800px;">
+                <h3>Create New Portfolio</h3>
+                
+                <form id="createPortfolioForm">
+                    <div class="form-group">
+                        <label for="portfolioName" class="form-label">Portfolio Name *</label>
+                        <input 
+                            type="text" 
+                            id="portfolioName" 
+                            class="input-field"
+                            placeholder="e.g., Retirement Fund"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="portfolioDescription" class="form-label">Description (Optional)</label>
+                        <textarea 
+                            id="portfolioDescription" 
+                            class="textarea-field"
+                            placeholder="Describe your investment goals..."
+                        ></textarea>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <h4>Assets</h4>
+                    <p class="text-secondary" style="margin-bottom: var(--space-lg);">
+                        Add assets to your portfolio. Total allocation must equal 100%.
+                    </p>
+
+                    <div id="assetsList">
+                        <!-- Asset rows will be added here -->
+                    </div>
+
+                    <button type="button" class="btn-secondary" onclick="addAssetRow()">
+                        ➕ Add Asset
+                    </button>
+
+                    <div id="allocationStatus" class="alert alert-info" style="margin-top: var(--space-lg);">
+                        Total Allocation: <strong id="totalAllocation">0%</strong>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeCreatePortfolioModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Create Portfolio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Create Account Modal -->
+        <div id="createAccountModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <h3>Create New Account</h3>
+                
+                <form id="createAccountForm">
+                    <div class="form-group">
+                        <label for="accountPortfolio" class="form-label">Portfolio *</label>
+                        <select id="accountPortfolio" class="select-field" required onchange="loadAccountAssetOptions()">
+                            <option value="">Select Portfolio</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                        <small class="form-hint">Which portfolio does this account belong to?</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accountType" class="form-label">Account Type *</label>
+                        <select id="accountType" class="select-field" required onchange="updateAccountCurrency(); loadAccountAssetOptions()">
+                            <option value="">Select Type</option>
+                            <option value="thb_savings">THB Savings Account</option>
+                            <option value="fcd_account">FCD Account (USD)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accountLinkedAsset" class="form-label">Link to Asset (Optional)</label>
+                        <select id="accountLinkedAsset" class="select-field">
+                            <option value="">No Link (Standalone Account)</option>
+                            <!-- Options loaded dynamically based on portfolio + type -->
+                        </select>
+                        <small class="form-hint">Link this account to a portfolio asset for auto-sync value</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accountName" class="form-label">Account Name *</label>
+                        <input 
+                            type="text" 
+                            id="accountName" 
+                            class="input-field"
+                            placeholder="e.g., Emergency Fund - Dime"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="accountInstitution" class="form-label">Bank/Institution</label>
+                            <input 
+                                type="text" 
+                                id="accountInstitution" 
+                                class="input-field"
+                                placeholder="e.g., Dime, SCB"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="accountNumber" class="form-label">Account Number</label>
+                            <input 
+                                type="text" 
+                                id="accountNumber" 
+                                class="input-field"
+                                placeholder="xxx-1234"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="initialBalance" class="form-label">Initial Balance</label>
+                        <div class="input-with-icon">
+                            <input 
+                                type="number" 
+                                id="initialBalance" 
+                                class="input-field"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                            />
+                            <span class="input-icon" id="currencyIcon">THB</span>
+                        </div>
+                        <small class="form-hint">Current balance in this account</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="accountNotes" class="form-label">Notes (Optional)</label>
+                        <textarea 
+                            id="accountNotes" 
+                            class="textarea-field"
+                            placeholder="Additional notes about this account..."
+                        ></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Interest Tiers:</strong> Default tiered interest rates will be applied based on account type (Dime Bank rates).
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeCreateAccountModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Create Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Account Operations Modal -->
+        <div id="accountOperationModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <h3 id="operationTitle">Account Operation</h3>
+                
+                <form id="accountOperationForm">
+                    <input type="hidden" id="operationAccountId">
+                    <input type="hidden" id="operationType">
+
+                    <div class="form-group">
+                        <label for="operationAmount" class="form-label">Amount *</label>
+                        <div class="input-with-icon">
+                            <input 
+                                type="number" 
+                                id="operationAmount" 
+                                class="input-field"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0.01"
+                                required
+                            />
+                            <span class="input-icon" id="operationCurrency">THB</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="operationDate" class="form-label">Date *</label>
+                        <input 
+                            type="date" 
+                            id="operationDate" 
+                            class="input-field"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="operationDescription" class="form-label">Description</label>
+                        <input 
+                            type="text" 
+                            id="operationDescription" 
+                            class="input-field"
+                            placeholder="Transaction description"
+                        />
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeAccountOperationModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Confirm
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Account Modal -->
+        <div id="editAccountModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <h3>Edit Account</h3>
+                
+                <form id="editAccountForm">
+                    <input type="hidden" id="editAccountId">
+                    
+                    <div class="form-group">
+                        <label for="editAccountPortfolio" class="form-label">Portfolio *</label>
+                        <select id="editAccountPortfolio" class="select-field" required onchange="loadEditAccountAssetOptions()">
+                            <option value="">Select Portfolio</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                        <small class="form-hint">Which portfolio does this account belong to?</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAccountType" class="form-label">Account Type *</label>
+                        <select id="editAccountType" class="select-field" required onchange="updateEditAccountCurrency(); loadEditAccountAssetOptions()">
+                            <option value="">Select Type</option>
+                            <option value="thb_savings">THB Savings Account</option>
+                            <option value="fcd_account">FCD Account (USD)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAccountLinkedAsset" class="form-label">Link to Asset (Optional)</label>
+                        <select id="editAccountLinkedAsset" class="select-field">
+                            <option value="">No Link (Standalone Account)</option>
+                            <!-- Options loaded dynamically based on portfolio + type -->
+                        </select>
+                        <small class="form-hint">Link this account to a portfolio asset for auto-sync value</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAccountName" class="form-label">Account Name *</label>
+                        <input 
+                            type="text" 
+                            id="editAccountName" 
+                            class="input-field"
+                            placeholder="e.g., Emergency Fund - Dime"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editAccountInstitution" class="form-label">Bank/Institution</label>
+                            <input 
+                                type="text" 
+                                id="editAccountInstitution" 
+                                class="input-field"
+                                placeholder="e.g., Dime, SCB"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editAccountNumber" class="form-label">Account Number</label>
+                            <input 
+                                type="text" 
+                                id="editAccountNumber" 
+                                class="input-field"
+                                placeholder="xxx-1234"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editAccountNotes" class="form-label">Notes (Optional)</label>
+                        <textarea 
+                            id="editAccountNotes" 
+                            class="textarea-field"
+                            placeholder="Additional notes about this account..."
+                        ></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> Account balance and interest tiers are managed through transactions and account operations.
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeEditAccountModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Record Transaction Modal -->
+        <div id="recordTransactionModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 600px;">
+                <h3>Record Transaction</h3>
+                
+                <form id="recordTransactionForm">
+                    <div class="form-group">
+                        <label for="txnPortfolio" class="form-label">Portfolio *</label>
+                        <select id="txnPortfolio" class="select-field" required onchange="updateTransactionAssets()">
+                            <option value="">Select Portfolio</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txnType" class="form-label">Transaction Type *</label>
+                        <select id="txnType" class="select-field" required onchange="updateTransactionFields()">
+                            <option value="">Select Type</option>
+                            <option value="BUY">Buy Asset</option>
+                            <option value="SELL">Sell Asset</option>
+                            <option value="DIVIDEND">Dividend/Income</option>
+                            <option value="DEPOSIT">Deposit</option>
+                            <option value="WITHDRAW">Withdraw</option>
+                            <option value="INTEREST">Interest</option>
+                            <option value="TRANSFER">Transfer Between Accounts</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="txnAssetGroup">
+                        <label for="txnAsset" class="form-label">Asset *</label>
+                        <select id="txnAsset" class="select-field" required>
+                            <option value="">Select Asset</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="txnAccountGroup">
+                        <label for="txnAccount" class="form-label">From Account</label>
+                        <select id="txnAccount" class="select-field" onchange="updateTransactionCurrency()">
+                            <option value="">No Account (Manual)</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                        <small class="form-hint">Select account to auto-update balance</small>
+                    </div>
+
+                    <div class="form-group" id="txnDestinationGroup" style="display: none;">
+                        <label for="txnDestinationAccount" class="form-label">To Account *</label>
+                        <select id="txnDestinationAccount" class="select-field" required onchange="checkCrossCurrencyTransfer()">
+                            <option value="">Select Destination Account</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                        <small class="form-hint">Account to receive the transfer</small>
+                    </div>
+
+                    <!-- Exchange Rate Field (for cross-currency transfers) -->
+                    <div class="form-group" id="txnExchangeRateGroup" style="display: none;">
+                        <label for="txnExchangeRate" class="form-label">
+                            Exchange Rate: 1 <span id="txnExchangeRateLabel">USD</span> = ? THB *
+                        </label>
+                        <input 
+                            type="number" 
+                            id="txnExchangeRate" 
+                            class="input-field"
+                            placeholder="35.00"
+                            step="0.0001"
+                            min="0.0001"
+                            onchange="updateTransferCalculation()"
+                        />
+                        <small class="form-hint" id="txnExchangeRateHelp">How many THB = 1 USD</small>
+                    </div>
+
+                    <!-- Transfer Calculation Preview -->
+                    <div class="alert alert-info" id="txnTransferCalculation" style="display: none;">
+                        <!-- Transfer preview will be shown here -->
+                    </div>
+
+                    <div class="form-row" id="txnQuantityPriceRow">
+                        <div class="form-group">
+                            <label for="txnQuantity" class="form-label">Quantity/Shares *</label>
+                            <input 
+                                type="number" 
+                                id="txnQuantity" 
+                                class="input-field"
+                                placeholder="0.00000000"
+                                step="0.00000001"
+                                min="0.00000001"
+                                required
+                                onchange="calculateTxnTotal()"
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="txnPrice" class="form-label">Price per Unit *</label>
+                            <input 
+                                type="number" 
+                                id="txnPrice" 
+                                class="input-field"
+                                placeholder="0.000000"
+                                step="0.000001"
+                                min="0.000001"
+                                required
+                                onchange="calculateTxnTotal()"
+                            />
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="txnCurrencyHidden" value="THB">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="txnTotal" class="form-label">Total Amount *</label>
+                            <div class="input-with-icon">
+                                <input 
+                                    type="number" 
+                                    id="txnTotal" 
+                                    class="input-field"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0.01"
+                                    required
+                                    readonly
+                                    onchange="updateTransferCalculation()"
+                                />
+                                <span class="input-icon txn-currency-display">THB</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="txnFee" class="form-label">Fee/Commission</label>
+                            <div class="input-with-icon">
+                                <input 
+                                    type="number" 
+                                    id="txnFee" 
+                                    class="input-field"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                    value="0"
+                                />
+                                <span class="input-icon txn-currency-display">THB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txnDate" class="form-label">Date *</label>
+                        <input 
+                            type="date" 
+                            id="txnDate" 
+                            class="input-field"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txnNotes" class="form-label">Notes (Optional)</label>
+                        <textarea 
+                            id="txnNotes" 
+                            class="textarea-field"
+                            placeholder="Additional transaction details..."
+                        ></textarea>
+                    </div>
+
+                    <div class="alert alert-info" id="txnBalanceWarning" style="display: none;">
+                        <strong>Note:</strong> This transaction will automatically update your account balance.
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeRecordTransactionModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Record Transaction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Inactivity Warning Modal -->
+        <div id="inactivityModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>⚠️ Session Timeout Warning</h3>
+                <p>Your session will lock in <strong>1 minute</strong> due to inactivity.</p>
+                <div class="modal-actions">
+                    <button class="btn-primary" onclick="dismissInactivityWarning()">
+                        Stay Active
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Price Entry Modal -->
+        <div id="manualPriceModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <h3>Set Manual Price</h3>
+                
+                <form id="manualPriceForm">
+                    <input type="hidden" id="priceAssetId">
+                    
+                    <div class="form-group">
+                        <label for="priceAssetName" class="form-label">Asset</label>
+                        <input 
+                            type="text" 
+                            id="priceAssetName" 
+                            class="input-field"
+                            readonly
+                            style="background: var(--color-background-gray);"
+                        />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manualPrice" class="form-label">Price *</label>
+                            <input 
+                                type="number" 
+                                id="manualPrice" 
+                                class="input-field"
+                                placeholder="0.000000"
+                                step="0.000001"
+                                min="0.000001"
+                                required
+                            />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="priceCurrency" class="form-label">Currency</label>
+                            <select id="priceCurrency" class="select-field">
+                                <option value="THB">THB</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> Manual prices are stored locally and won't be automatically updated.
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeManualPriceModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Save Price
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Portfolio Detail Modal -->
+        <div id="portfolioDetailModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                <div style="position: sticky; top: 0; background: var(--color-bg); z-index: 10; padding-bottom: var(--space-md); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-lg);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button type="button" class="btn-secondary" onclick="closePortfolioDetailModal()">
+                            ← Back
+                        </button>
+                        <h3 id="portfolioDetailName" style="margin: 0;"></h3>
+                        <button type="button" class="btn-secondary" id="editPortfolioBtn" onclick="showEditPortfolioModal()">
+                            ✏️ Edit
+                        </button>
+                    </div>
+                </div>
+
+                <div id="portfolioDetailContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Rebalancing Modal -->
+        <div id="rebalancingModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+                <div style="position: sticky; top: 0; background: var(--color-bg); z-index: 10; padding-bottom: var(--space-md); border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-lg);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button type="button" class="btn-secondary" onclick="closeRebalancingModal()">
+                            ← Back
+                        </button>
+                        <h3 id="rebalancingPortfolioName" style="margin: 0;">Portfolio Rebalancing</h3>
+                        <div></div>
+                    </div>
+                </div>
+
+                <div id="rebalancingContent">
+                    <!-- Drift Analysis Section -->
+                    <div id="driftAnalysisSection" style="margin-bottom: var(--space-xl);">
+                        <!-- Will be populated dynamically -->
+                    </div>
+
+                    <!-- Strategy Selection -->
+                    <div class="card" style="margin-bottom: var(--space-xl);">
+                        <h4 style="margin-bottom: var(--space-md);">Rebalancing Strategy</h4>
+                        <div style="display: flex; gap: var(--space-md); margin-bottom: var(--space-lg);">
+                            <button class="btn-secondary strategy-btn" data-strategy="cashflow" onclick="selectRebalancingStrategy('cashflow')">
+                                💵 Cash Flow
+                            </button>
+                            <button class="btn-primary strategy-btn active" data-strategy="full" onclick="selectRebalancingStrategy('full')">
+                                🔄 Full Rebalance
+                            </button>
+                            <button class="btn-secondary strategy-btn" data-strategy="tax-efficient" onclick="selectRebalancingStrategy('tax-efficient')">
+                                💰 Tax-Efficient
+                            </button>
+                        </div>
+
+                        <!-- Strategy Description -->
+                        <div id="strategyDescription" class="alert alert-info">
+                            <strong>Full Rebalance:</strong> Buy and sell assets to match target allocation exactly. Best for maintaining precise allocation.
+                        </div>
+
+                        <!-- Cash Flow Options -->
+                        <div id="cashFlowOptions" style="display: none; margin-top: var(--space-md);">
+                            <div class="form-group">
+                                <label for="availableCash" class="form-label">Available Cash to Invest (THB) *</label>
+                                <input 
+                                    type="number" 
+                                    id="availableCash" 
+                                    class="input-field"
+                                    placeholder="10000"
+                                    step="100"
+                                    min="100"
+                                    value="10000"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations Section -->
+                    <div class="card" style="margin-bottom: var(--space-xl);">
+                        <h4 style="margin-bottom: var(--space-md);">Recommendations</h4>
+                        <div id="recommendationsSection">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Impact Preview -->
+                    <div class="card" style="margin-bottom: var(--space-xl);">
+                        <h4 style="margin-bottom: var(--space-md);">Expected Impact</h4>
+                        <div id="impactPreview" class="dashboard-grid" style="gap: var(--space-sm);">
+                            <!-- Impact metrics will be shown here -->
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; gap: var(--space-md); justify-content: flex-end;">
+                        <button class="btn-secondary" onclick="closeRebalancingModal()">
+                            Cancel
+                        </button>
+                        <button class="btn-primary" onclick="generateRebalancingRecommendations()">
+                            📊 Calculate Recommendations
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Portfolio Modal -->
+        <div id="editPortfolioModal" class="modal hidden">
+            <div class="modal-content" style="max-width: 800px;">
+                <h3>Edit Portfolio</h3>
+                
+                <form id="editPortfolioForm">
+                    <input type="hidden" id="editPortfolioId">
+                    
+                    <div class="form-group">
+                        <label for="editPortfolioName" class="form-label">Portfolio Name *</label>
+                        <input 
+                            type="text" 
+                            id="editPortfolioName" 
+                            class="input-field"
+                            placeholder="e.g., Retirement Fund"
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="editPortfolioDescription" class="form-label">Description (Optional)</label>
+                        <textarea 
+                            id="editPortfolioDescription" 
+                            class="textarea-field"
+                            placeholder="Describe your investment goals..."
+                        ></textarea>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <h4>Assets</h4>
+                    <p class="text-secondary" style="margin-bottom: var(--space-lg);">
+                        Modify assets in your portfolio. Total allocation must equal 100%.
+                    </p>
+
+                    <div id="editAssetsList">
+                        <!-- Asset rows will be added here -->
+                    </div>
+
+                    <button type="button" class="btn-secondary" onclick="addEditAssetRow()">
+                        ➕ Add Asset
+                    </button>
+
+                    <div id="editAllocationStatus" class="alert alert-info" style="margin-top: var(--space-lg);">
+                        Total Allocation: <strong id="editTotalAllocation">0%</strong>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeEditPortfolioModal()">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/utils.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/portfolio.js"></script>
+    <script src="js/accounts.js"></script>
+    <script src="js/fifo.js"></script>
+    <script src="js/transactions.js"></script>
+    <script src="js/prices.js"></script>
+    <script src="js/planning.js"></script>
+    <script src="js/rebalancing.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

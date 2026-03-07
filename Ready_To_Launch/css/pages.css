@@ -1,0 +1,649 @@
+/* ============================================================================
+   PAGE-SPECIFIC STYLES
+   Dashboard, Portfolios, Accounts, Transactions, Planning, Reports
+   ============================================================================ */
+
+/* ============================================================================
+   DASHBOARD PAGE
+   ============================================================================ */
+
+.dashboard-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.summary-card {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+}
+
+.summary-value {
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+.summary-label {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-change {
+    margin-top: var(--space-sm);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+}
+
+.summary-change.positive {
+    color: var(--color-success);
+}
+
+.summary-change.negative {
+    color: var(--color-danger);
+}
+
+/* ============================================================================
+   PORTFOLIO PAGE
+   ============================================================================ */
+
+.portfolio-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+.portfolio-card {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+    cursor: pointer;
+    transition: all var(--duration-normal) var(--ease-standard);
+}
+
+.portfolio-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.portfolio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+}
+
+.portfolio-name {
+    font-size: var(--font-size-h4);
+    font-weight: 600;
+    margin: 0;
+}
+
+.portfolio-value {
+    font-size: var(--font-size-h3);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-sm);
+}
+
+.portfolio-return {
+    font-size: var(--font-size-body);
+    font-weight: 500;
+}
+
+.portfolio-assets {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+.portfolio-asset-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) 0;
+    font-size: var(--font-size-small);
+}
+
+.asset-name {
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+
+.asset-allocation {
+    color: var(--color-text-secondary);
+}
+
+/* ============================================================================
+   ALLOCATION CHART
+   ============================================================================ */
+
+.allocation-section {
+    margin-bottom: var(--space-xl);
+}
+
+.allocation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+}
+
+.chart-container {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 300px;
+}
+
+.allocation-legend {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.legend-color {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--border-radius-sm);
+    flex-shrink: 0;
+}
+
+.legend-info {
+    flex: 1;
+}
+
+.legend-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    display: block;
+}
+
+.legend-details {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+    display: flex;
+    gap: var(--space-md);
+}
+
+/* ============================================================================
+   REBALANCING WARNINGS
+   ============================================================================ */
+
+.rebalance-section {
+    margin-bottom: var(--space-xl);
+}
+
+.rebalance-alert {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+.rebalance-alert.warning {
+    border-left: 4px solid var(--color-warning);
+}
+
+.rebalance-alert.critical {
+    border-left: 4px solid var(--color-danger);
+}
+
+.rebalance-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.rebalance-icon {
+    font-size: 24px;
+}
+
+.rebalance-title {
+    font-size: var(--font-size-h4);
+    font-weight: 600;
+    margin: 0;
+}
+
+.rebalance-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.rebalance-item {
+    background: var(--color-background-gray);
+    padding: var(--space-md);
+    border-radius: var(--border-radius-md);
+}
+
+.rebalance-asset-name {
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+}
+
+.rebalance-stats {
+    display: flex;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-sm);
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+.rebalance-action {
+    font-size: var(--font-size-small);
+    padding: var(--space-sm);
+    background: var(--color-background-light);
+    border-radius: var(--border-radius-sm);
+    border-left: 3px solid var(--color-accent-blue);
+}
+
+/* ============================================================================
+   ACCOUNT PAGE
+   ============================================================================ */
+
+.account-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.account-card {
+    background: linear-gradient(135deg, var(--color-accent-blue) 0%, #0062C2 100%);
+    color: white;
+    border-radius: var(--border-radius-xl);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.account-card.thb {
+    background: linear-gradient(135deg, #34C759 0%, #2DA54A 100%);
+}
+
+.account-card.usd {
+    background: linear-gradient(135deg, #0071E3 0%, #0062C2 100%);
+}
+
+.account-type {
+    font-size: var(--font-size-small);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.9;
+    margin-bottom: var(--space-sm);
+}
+
+.account-balance {
+    font-size: var(--font-size-h1);
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+}
+
+.account-currency {
+    font-size: var(--font-size-h3);
+    opacity: 0.8;
+}
+
+.account-details {
+    display: flex;
+    justify-content: space-between;
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-detail-item {
+    text-align: center;
+}
+
+.account-detail-label {
+    font-size: var(--font-size-tiny);
+    opacity: 0.8;
+    margin-bottom: var(--space-xs);
+}
+
+.account-detail-value {
+    font-size: var(--font-size-body);
+    font-weight: 600;
+}
+
+/* ============================================================================
+   PAGES
+   Page-specific styles
+   ============================================================================ */
+
+/* Dashboard Page */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+}
+
+/* Dashboard Enhancements - Quick Actions */
+#quickActions .btn-primary,
+#quickActions .btn-secondary {
+    min-width: 120px;
+}
+
+/* Dashboard Enhancements - Alerts */
+#dashboardAlerts {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#dashboardAlerts .btn-link {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+#dashboardAlerts .btn-link:hover {
+    color: var(--color-primary);
+}
+
+#dashboardAlerts .btn-icon {
+    padding: 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+#dashboardAlerts .btn-icon:hover {
+    opacity: 1;
+}
+
+/* Dashboard Enhancements - Performance Metrics */
+#performanceMetrics .card-ultra-compact {
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#performanceMetrics .card-ultra-compact:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dashboard Enhancements - Portfolio Health Indicators */
+.dashboard-grid .card[onclick] {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-grid .card[onclick]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.transaction-list {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+}
+
+.transaction-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+    align-items: center;
+    transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-item:hover {
+    background: var(--color-background-gray);
+}
+
+.transaction-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--border-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: var(--color-background-gray);
+}
+
+.transaction-icon.buy {
+    background: rgba(52, 199, 89, 0.1);
+    color: var(--color-success);
+}
+
+.transaction-icon.sell {
+    background: rgba(255, 59, 48, 0.1);
+    color: var(--color-danger);
+}
+
+.transaction-info {
+    flex: 1;
+}
+
+.transaction-asset {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.transaction-date {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+.transaction-amount {
+    text-align: right;
+    font-size: var(--font-size-h4);
+    font-weight: 600;
+}
+
+.transaction-amount.positive {
+    color: var(--color-success);
+}
+
+.transaction-amount.negative {
+    color: var(--color-danger);
+}
+
+/* ============================================================================
+   PLANNING PAGE
+   ============================================================================ */
+
+.planning-tabs {
+    margin-bottom: var(--space-xl);
+}
+
+.planning-form {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+}
+
+.projection-table {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+}
+
+.projection-summary {
+    background: var(--color-background-gray);
+    padding: var(--space-lg);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.projection-stat {
+    text-align: center;
+}
+
+.projection-stat-value {
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: var(--space-xs);
+}
+
+.projection-stat-label {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+/* ============================================================================
+   REPORTS PAGE
+   ============================================================================ */
+
+.report-controls {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.period-selector {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.report-section {
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.report-section-title {
+    font-size: var(--font-size-h3);
+    font-weight: 600;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 2px solid var(--color-border);
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+}
+
+.metric-card {
+    text-align: center;
+    padding: var(--space-lg);
+    background: var(--color-background-gray);
+    border-radius: var(--border-radius-md);
+}
+
+.metric-value {
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    margin-bottom: var(--space-xs);
+}
+
+.metric-label {
+    font-size: var(--font-size-small);
+    color: var(--color-text-secondary);
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .allocation-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .portfolio-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .account-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .transaction-item {
+        grid-template-columns: auto 1fr;
+        gap: var(--space-md);
+    }
+    
+    .transaction-amount {
+        grid-column: 2;
+        text-align: left;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .report-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .period-selector {
+        flex-wrap: wrap;
+    }
+}
