@@ -640,3 +640,37 @@ button:disabled,
         width: 100%;
     }
 }
+
+/* ============================================================================
+   GOOGLE DRIVE SYNC STATUS
+   ============================================================================ */
+
+#syncButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sync-status {
+    font-size: 10px;
+    margin-left: 2px;
+}
+
+.sync-status.synced::before {
+    content: '🟢';
+}
+
+.sync-status.syncing::before {
+    content: '🟡';
+    animation: pulse 1s infinite;
+}
+
+.sync-status.offline::before {
+    content: '🔴';
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

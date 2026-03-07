@@ -415,6 +415,9 @@ const AuthManager = {
         // Start activity monitoring
         this.startActivityMonitoring();
 
+        // Auto-sync with Google Drive
+        this.initGoogleDriveSync();
+
         Utils.showNotification('Welcome back!', 'success', 2000);
     },
 
@@ -428,11 +431,44 @@ const AuthManager = {
         // Stop activity monitoring
         this.stopActivityMonitoring();
 
+        // Sign out from Google Drive (optional - keeps user signed in)
+        // GoogleDriveManager.signOut();
+
         // Hide app, show login
         Utils.toggleElement('#app', false);
         this.showLoginScreen();
 
         Utils.showNotification('Application locked', 'info', 2000);
+    },
+
+    /**
+     * Initialize Google Drive sync
+     */
+    async initGoogleDriveSync() {
+        try {
+            if (typeof GoogleDriveManager === 'undefined') {
+                console.log('Google Drive not available');
+                return;
+            }
+
+            // Initialize Google Drive API
+            await GoogleDriveManager.init();
+
+            // Check if already authenticated
+            const isAuth = await GoogleDriveManager.checkAuth();
+
+            if (isAuth) {
+                console.log('Google Drive already authenticated, syncing...');
+                // Auto-load latest data from cloud
+                await StorageManager.loadFromCloud();
+            } else {
+                console.log('Google Drive not authenticated. Use sync button to authenticate.');
+            }
+
+        } catch (error) {
+            console.error('Google Drive auto-sync failed:', error);
+            // Don't block app if sync fails
+        }
     },
 
     /**

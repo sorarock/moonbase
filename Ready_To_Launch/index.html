@@ -16,6 +16,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+    <!-- Google Drive API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -146,8 +150,9 @@
                     <h1 class="app-title">Portfolio Manager</h1>
                 </div>
                 <div class="header-right">
-                    <button class="btn-icon" id="syncButton" title="Sync to Cloud">
-                        ☁️
+                    <button class="btn-icon" id="syncButton" title="Google Drive Sync">
+                        <span id="syncIcon">☁️</span>
+                        <span id="syncStatus" class="sync-status"></span>
                     </button>
                     <button class="btn-icon" id="settingsButton" title="Settings">
                         ⚙️
@@ -1535,6 +1540,7 @@
 
     <!-- JavaScript -->
     <script src="js/utils.js"></script>
+    <script src="js/googledrive.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/portfolio.js"></script>
@@ -1542,6 +1548,7 @@
     <script src="js/fifo.js"></script>
     <script src="js/transactions.js"></script>
     <script src="js/prices.js"></script>
+    <script src="js/autorefresh.js"></script>
     <script src="js/planning.js"></script>
     <script src="js/rebalancing.js"></script>
     <script src="js/reports.js"></script>

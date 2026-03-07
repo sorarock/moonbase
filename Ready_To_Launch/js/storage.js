@@ -18,7 +18,7 @@ const StorageManager = {
         CLOUD_FOLDER: 'cloudFolderHandle'
     },
 
-    cloudFolderHandle: null,
+    // Google Drive integration (replaces File System Access API)
     isCloudEnabled: false,
 
     /**
@@ -37,8 +37,8 @@ const StorageManager = {
         // Initialize default data structures if they don't exist
         this.initializeDefaults();
 
-        // Load cloud folder handle if exists
-        this.loadCloudFolderHandle();
+        // Initialize Google Drive
+        this.initGoogleDrive();
 
         console.log('Storage Manager initialized');
         return true;
@@ -128,184 +128,49 @@ const StorageManager = {
     },
 
     // ========================================================================
-    // CLOUD STORAGE OPERATIONS (File System Access API)
+    // CLOUD STORAGE OPERATIONS (Google Drive API)
     // ========================================================================
 
     /**
-     * Select cloud folder for sync
-     * @returns {Promise<boolean>} Success status
+     * Initialize Google Drive
      */
-    async selectCloudFolder() {
+    async initGoogleDrive() {
         try {
-            // Check if File System Access API is supported
-            if (!('showDirectoryPicker' in window)) {
-                Utils.showNotification('Cloud sync requires a modern browser (Chrome 86+)', 'error');
-                return false;
+            // Initialize Google Drive API
+            if (typeof GoogleDriveManager !== 'undefined') {
+                await GoogleDriveManager.init();
+                this.isCloudEnabled = true;
+                console.log('✓ Google Drive ready for sync');
             }
-
-            // Show directory picker
-            const dirHandle = await window.showDirectoryPicker({
-                mode: 'readwrite'
-            });
-
-            this.cloudFolderHandle = dirHandle;
-            this.isCloudEnabled = true;
-
-            // Save folder name to localStorage (can't save handle directly)
-            const settings = this.loadFromLocal(this.KEYS.SETTINGS);
-            settings.cloudFolderName = dirHandle.name;
-            settings.cloudFolderPath = dirHandle.name; // Approximate path
-            this.saveToLocal(this.KEYS.SETTINGS, settings);
-
-            Utils.showNotification(`Cloud folder selected: ${dirHandle.name}`, 'success');
-            return true;
-
         } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Error selecting cloud folder:', error);
-                Utils.showNotification('Failed to select cloud folder', 'error');
-            }
-            return false;
+            console.error('Failed to initialize Google Drive:', error);
         }
     },
 
     /**
-     * Load cloud folder handle from previous session
-     */
-    async loadCloudFolderHandle() {
-        const settings = this.loadFromLocal(this.KEYS.SETTINGS);
-        if (settings && settings.cloudFolderName) {
-            // Note: Due to browser security, we can't restore the handle
-            // User will need to re-select the folder
-            console.log('Previous cloud folder:', settings.cloudFolderName);
-        }
-    },
-
-    /**
-     * Sync data to cloud folder
+     * Sync data to cloud (Google Drive)
      * @returns {Promise<boolean>} Success status
      */
     async syncToCloud() {
-        if (!this.cloudFolderHandle) {
-            const result = await this.selectCloudFolder();
-            if (!result) return false;
-        }
-
-        try {
-            Utils.showNotification('Syncing to cloud...', 'info', 1000);
-
-            // Get all data from localStorage
-            const dataToSync = {};
-            for (const key of Object.values(this.KEYS)) {
-                if (key !== 'CLOUD_FOLDER') {
-                    dataToSync[key] = this.loadFromLocal(key);
-                }
-            }
-
-            // Save each data type to separate JSON file
-            for (const [key, data] of Object.entries(dataToSync)) {
-                const fileName = `${key}.json`;
-                await this.writeCloudFile(fileName, data);
-            }
-
-            // Update last sync time
-            const settings = this.loadFromLocal(this.KEYS.SETTINGS);
-            settings.lastSync = new Date().toISOString();
-            this.saveToLocal(this.KEYS.SETTINGS, settings);
-
-            Utils.showNotification('Successfully synced to cloud', 'success');
-            return true;
-
-        } catch (error) {
-            console.error('Error syncing to cloud:', error);
-            Utils.showNotification('Failed to sync to cloud', 'error');
+        if (typeof GoogleDriveManager === 'undefined') {
+            Utils.showNotification('Google Drive not available', 'error');
             return false;
         }
+
+        return await GoogleDriveManager.syncToCloud();
     },
 
     /**
-     * Load data from cloud folder
+     * Load data from cloud (Google Drive)
      * @returns {Promise<boolean>} Success status
      */
     async loadFromCloud() {
-        if (!this.cloudFolderHandle) {
-            const result = await this.selectCloudFolder();
-            if (!result) return false;
-        }
-
-        try {
-            Utils.showNotification('Loading from cloud...', 'info', 1000);
-
-            let filesLoaded = 0;
-
-            // Load each data type from JSON files
-            for (const key of Object.values(this.KEYS)) {
-                if (key !== 'CLOUD_FOLDER') {
-                    const fileName = `${key}.json`;
-                    const data = await this.readCloudFile(fileName);
-                    
-                    if (data !== null) {
-                        this.saveToLocal(key, data);
-                        filesLoaded++;
-                    }
-                }
-            }
-
-            if (filesLoaded > 0) {
-                Utils.showNotification(`Loaded ${filesLoaded} files from cloud`, 'success');
-                
-                // Reload the page to reflect changes
-                if (Utils.confirm('Data loaded successfully. Reload page to see changes?')) {
-                    window.location.reload();
-                }
-                return true;
-            } else {
-                Utils.showNotification('No data found in cloud folder', 'warning');
-                return false;
-            }
-
-        } catch (error) {
-            console.error('Error loading from cloud:', error);
-            Utils.showNotification('Failed to load from cloud', 'error');
+        if (typeof GoogleDriveManager === 'undefined') {
+            Utils.showNotification('Google Drive not available', 'error');
             return false;
         }
-    },
 
-    /**
-     * Write file to cloud folder
-     * @param {string} fileName - File name
-     * @param {any} data - Data to write
-     */
-    async writeCloudFile(fileName, data) {
-        try {
-            const fileHandle = await this.cloudFolderHandle.getFileHandle(fileName, { create: true });
-            const writable = await fileHandle.createWritable();
-            await writable.write(JSON.stringify(data, null, 2));
-            await writable.close();
-            return true;
-        } catch (error) {
-            console.error(`Error writing file ${fileName}:`, error);
-            throw error;
-        }
-    },
-
-    /**
-     * Read file from cloud folder
-     * @param {string} fileName - File name
-     * @returns {any} File contents or null
-     */
-    async readCloudFile(fileName) {
-        try {
-            const fileHandle = await this.cloudFolderHandle.getFileHandle(fileName);
-            const file = await fileHandle.getFile();
-            const contents = await file.text();
-            return JSON.parse(contents);
-        } catch (error) {
-            if (error.name !== 'NotFoundError') {
-                console.error(`Error reading file ${fileName}:`, error);
-            }
-            return null;
-        }
+        return await GoogleDriveManager.loadFromCloud();
     },
 
     // ========================================================================

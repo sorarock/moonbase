@@ -2694,13 +2694,48 @@ window.updateAllocationTotal = function() {
 // Initialize app and setup all event handlers when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Setting up application...');
-    
+
     // Initialize app after brief delay for auth
     setTimeout(() => {
         console.log('Initializing App...');
         App.init();
     }, 100);
-    
+
+    // Setup Google Drive sync button
+    const syncButton = document.getElementById('syncButton');
+    if (syncButton) {
+        syncButton.addEventListener('click', async () => {
+            const syncStatus = document.getElementById('syncStatus');
+
+            try {
+                // Show syncing status
+                if (syncStatus) {
+                    syncStatus.className = 'sync-status syncing';
+                }
+                syncButton.disabled = true;
+
+                // Sync to Google Drive
+                const success = await StorageManager.syncToCloud();
+
+                // Update status
+                if (success && syncStatus) {
+                    syncStatus.className = 'sync-status synced';
+                    setTimeout(() => {
+                        syncStatus.className = 'sync-status';
+                    }, 3000);
+                }
+
+            } catch (error) {
+                console.error('Sync error:', error);
+                if (syncStatus) {
+                    syncStatus.className = 'sync-status offline';
+                }
+            } finally {
+                syncButton.disabled = false;
+            }
+        });
+    }
+
     // Setup portfolio form handler
     const createPortfolioForm = document.getElementById('createPortfolioForm');
     if (createPortfolioForm) {
