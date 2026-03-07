@@ -387,9 +387,10 @@ const GoogleDriveManager = {
 
     /**
      * Load all data FROM Google Drive
+     * @param {boolean} silent - If true, skip reload prompt (for auto-sync)
      * @returns {Promise<boolean>} Success status
      */
-    async loadFromCloud() {
+    async loadFromCloud(silent = false) {
         if (!this.isAuthenticated) {
             console.log('Not authenticated, attempting to authenticate...');
             try {
@@ -423,8 +424,14 @@ const GoogleDriveManager = {
                 console.log(`✓ Loaded ${filesLoaded} files from Google Drive`);
                 Utils.showNotification(`✓ Loaded ${filesLoaded} files from cloud`, 'success');
 
-                // Reload page to reflect changes
-                if (confirm('Data loaded successfully. Reload page to see changes?')) {
+                // Reload page to reflect changes (skip prompt if silent mode)
+                if (!silent) {
+                    if (confirm('Data loaded successfully. Reload page to see changes?')) {
+                        window.location.reload();
+                    }
+                } else {
+                    // Silent mode - reload automatically without prompt
+                    console.log('Silent sync - reloading page automatically...');
                     window.location.reload();
                 }
                 return true;

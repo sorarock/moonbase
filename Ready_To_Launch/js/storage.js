@@ -162,15 +162,16 @@ const StorageManager = {
 
     /**
      * Load data from cloud (Google Drive)
+     * @param {boolean} silent - If true, skip reload prompt (for auto-sync)
      * @returns {Promise<boolean>} Success status
      */
-    async loadFromCloud() {
+    async loadFromCloud(silent = false) {
         if (typeof GoogleDriveManager === 'undefined') {
             Utils.showNotification('Google Drive not available', 'error');
             return false;
         }
 
-        return await GoogleDriveManager.loadFromCloud();
+        return await GoogleDriveManager.loadFromCloud(silent);
     },
 
     // ========================================================================

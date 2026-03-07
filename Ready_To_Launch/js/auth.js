@@ -467,7 +467,7 @@ const AuthManager = {
                 if (!hasLocalData) {
                     // No local data - this might be first time or new device
                     console.log('No local data found, loading from cloud...');
-                    await StorageManager.loadFromCloud();
+                    await StorageManager.loadFromCloud(true); // Silent mode - auto reload
                 } else {
                     // Has local data - just sync TO cloud silently
                     console.log('Local data exists, syncing TO cloud in background...');
