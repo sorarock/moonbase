@@ -458,9 +458,25 @@ const AuthManager = {
             const isAuth = await GoogleDriveManager.checkAuth();
 
             if (isAuth) {
-                console.log('Google Drive already authenticated, syncing...');
-                // Auto-load latest data from cloud
-                await StorageManager.loadFromCloud();
+                console.log('Google Drive already authenticated');
+
+                // Check if local storage has data
+                const portfolios = StorageManager.getPortfolios();
+                const hasLocalData = portfolios && portfolios.length > 0;
+
+                if (!hasLocalData) {
+                    // No local data - this might be first time or new device
+                    console.log('No local data found, loading from cloud...');
+                    await StorageManager.loadFromCloud();
+                } else {
+                    // Has local data - just sync TO cloud silently
+                    console.log('Local data exists, syncing TO cloud in background...');
+                    StorageManager.syncToCloud().then(() => {
+                        console.log('Background sync completed');
+                    }).catch(err => {
+                        console.error('Background sync failed:', err);
+                    });
+                }
             } else {
                 console.log('Google Drive not authenticated. Use sync button to authenticate.');
             }
