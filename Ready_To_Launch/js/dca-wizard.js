@@ -518,7 +518,6 @@ const DCAWizard = {
                 <div class="asset-card-symbol">${asset.symbol}</div>
                 <div class="asset-card-amount">${currencySymbol}${amount.toFixed(2)}</div>
                 <div class="asset-card-date">Last: ${lastDate}</div>
-                <button class="btn-sm">Buy →</button>
             </div>
         `;
     },
