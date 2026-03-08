@@ -408,8 +408,8 @@ const DCAWizard = {
         const transaction = {
             portfolioId: this.currentPortfolioId,
             type: 'TRANSFER',
-            fromAccountId: fromAccountId,
-            toAccountId: toAccountId,
+            accountId: fromAccountId,
+            destinationAccountId: toAccountId,
             totalAmount: thbAmount,
             exchangeRate: rate,
             date: date,
