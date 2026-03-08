@@ -259,12 +259,12 @@ const ExcelImporter = {
         // Parse amounts
         const unit = parseFloat(row['Unit']) || 0;
         const price = parseFloat(row['Price']) || 0;
-        const totalAmountTHB = parseFloat(row['Total Amount (THB)']) || 0;
         const currency = (row['Currency'] || 'USD').toUpperCase();
-        const fxRate = parseFloat(row['FX Rate']) || 1;
+        const fxRate = parseFloat(row['FX Rate (THB per USD)']) || 1;
 
-        // Calculate USD amount from THB total
-        const totalAmountUSD = currency === 'USD' ? totalAmountTHB / fxRate : totalAmountTHB;
+        // Total Amount is in USD, calculate THB equivalent
+        const totalAmountUSD = parseFloat(row['Total Amount']) || 0;
+        const totalAmountTHB = totalAmountUSD * fxRate;
 
         return {
             id: Utils.generateId(),
@@ -296,7 +296,7 @@ const ExcelImporter = {
         // Parse lot data
         const initialUSD = parseFloat(row['USD In']) || parseFloat(row['Initial USD']) || 0;
         const remainingUSD = parseFloat(row['USD Remaining']) || parseFloat(row['Remaining USD']) || 0;
-        const fxRate = parseFloat(row['FX Rate']) || 0;
+        const fxRate = parseFloat(row['FX Rate (THB per USD)']) || 0;
         const thbCost = parseFloat(row['THB Cost']) || (initialUSD * fxRate);
 
         if (initialUSD === 0 || fxRate === 0) {
