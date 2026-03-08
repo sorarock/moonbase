@@ -164,7 +164,7 @@ const DCAWizard = {
     /**
      * Check if step can be started
      */
-    canStartStep(stepNum, stepData) {
+    canStartStep(stepNum) {
         const progress = this.getProgress(this.currentPortfolioId);
 
         if (stepNum === 1) return true; // Deposit always available
@@ -206,7 +206,6 @@ const DCAWizard = {
      * Show deposit form
      */
     showDepositForm() {
-        const portfolio = StorageManager.getPortfolios().find(p => p.id === this.currentPortfolioId);
         const accounts = StorageManager.getAccounts().filter(a => a.portfolioId === this.currentPortfolioId);
         const progress = this.getProgress(this.currentPortfolioId);
 
@@ -318,7 +317,6 @@ const DCAWizard = {
      * Show transfer form
      */
     showTransferForm() {
-        const portfolio = StorageManager.getPortfolios().find(p => p.id === this.currentPortfolioId);
         const accounts = StorageManager.getAccounts().filter(a => a.portfolioId === this.currentPortfolioId);
         const progress = this.getProgress(this.currentPortfolioId);
 
@@ -555,6 +553,12 @@ const DCAWizard = {
         document.getElementById('dcaBuyAssetName').textContent = asset.symbol;
         document.getElementById('dcaBuyAssetCurrency').textContent = asset.currency;
         document.getElementById('dcaBuyFromAccount').textContent = `${account.name} (${account.currency === 'USD' ? '$' + account.balance.toFixed(2) : '฿' + account.balance.toLocaleString()})`;
+
+        // Update button text
+        const buyBtn = document.getElementById('dcaBuyAssetNameBtn');
+        if (buyBtn) {
+            buyBtn.textContent = asset.symbol;
+        }
 
         // Pre-fill from template
         document.getElementById('dcaBuyQuantity').value = template.lastQuantity || '';
