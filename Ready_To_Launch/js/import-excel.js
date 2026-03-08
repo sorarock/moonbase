@@ -266,6 +266,10 @@ const ExcelImporter = {
         const totalAmountUSD = parseFloat(row['Total Amount']) || 0;
         const totalAmountTHB = totalAmountUSD * fxRate;
 
+        // For DEPOSIT/WITHDRAW, pricePerUnit should be 1 (not exchange rate)
+        // Exchange rate is preserved in exchangeRate field for FIFO tracking
+        const pricePerUnit = (type === 'DEPOSIT' || type === 'WITHDRAW') ? 1 : price;
+
         return {
             id: Utils.generateId(),
             portfolioId: portfolioId,
@@ -275,7 +279,7 @@ const ExcelImporter = {
             assetName: row['Asset'] || '',
             assetTicker: assetTicker,
             quantity: unit,
-            pricePerUnit: price,
+            pricePerUnit: pricePerUnit,
             totalAmount: totalAmountUSD,
             currency: currency,
             fee: 0,
