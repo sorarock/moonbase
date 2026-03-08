@@ -27,7 +27,10 @@ const AuthManager = {
         if (this.hasPasswordSet()) {
             // Check for remember me token
             if (this.checkRememberMeToken()) {
-                this.unlock();
+                this.unlock().catch(err => {
+                    console.error('Auto-unlock failed:', err);
+                    this.showLoginScreen();
+                });
             } else {
                 // Check if currently locked out
                 if (this.isLockedOut()) {
@@ -172,9 +175,24 @@ const AuthManager = {
         }
 
         Utils.showNotification('Password created successfully!', 'success');
-        
-        // Unlock and show app
-        this.unlock();
+
+        // Show app immediately without waiting for Google Drive sync
+        // (first-time setup shouldn't be blocked by cloud sync)
+        this.isLocked = false;
+        sessionStorage.setItem('sessionActive', 'true');
+        sessionStorage.setItem('sessionStart', Date.now().toString());
+
+        this.startActivityMonitoring();
+
+        Utils.toggleElement('#authScreen', false);
+        Utils.toggleElement('#app', true);
+
+        if (typeof App !== 'undefined') App.init();
+
+        // Initialize Google Drive in background (non-blocking)
+        this.initGoogleDriveSync().catch(err => {
+            console.error('Google Drive sync failed:', err);
+        });
     },
 
     // ========================================================================
@@ -220,8 +238,14 @@ const AuthManager = {
                 this.setRememberMeToken();
             }
 
-            // Unlock app
-            this.unlock();
+            // Unlock app (now async)
+            this.unlock().catch(err => {
+                console.error('Unlock failed:', err);
+                // Fallback: still show app
+                Utils.toggleElement('#authScreen', false);
+                Utils.toggleElement('#app', true);
+                if (typeof App !== 'undefined') App.init();
+            });
         } else {
             // Increment failed attempts
             this.incrementFailedAttempts();
@@ -403,20 +427,25 @@ const AuthManager = {
     /**
      * Unlock app and start session
      */
-    unlock() {
+    async unlock() {
         this.isLocked = false;
         sessionStorage.setItem('sessionActive', 'true');
         sessionStorage.setItem('sessionStart', Date.now().toString());
 
-        // Hide auth screens, show app
+        // Start activity monitoring first
+        this.startActivityMonitoring();
+
+        // CRITICAL: Wait for cloud sync BEFORE showing app
+        await this.initGoogleDriveSync();
+
+        // NOW show the app (after data is ready)
         Utils.toggleElement('#authScreen', false);
         Utils.toggleElement('#app', true);
 
-        // Start activity monitoring
-        this.startActivityMonitoring();
-
-        // Auto-sync with Google Drive
-        this.initGoogleDriveSync();
+        // Initialize app with fresh data
+        if (typeof App !== 'undefined' && typeof App.init === 'function') {
+            App.init();
+        }
 
         Utils.showNotification('Welcome back!', 'success', 2000);
     },
@@ -427,6 +456,7 @@ const AuthManager = {
     lock() {
         this.isLocked = true;
         sessionStorage.removeItem('sessionActive');
+        sessionStorage.removeItem('appInitialized');
 
         // Stop activity monitoring
         this.stopActivityMonitoring();
@@ -467,15 +497,25 @@ const AuthManager = {
                 if (!hasLocalData) {
                     // No local data - this might be first time or new device
                     console.log('No local data found, loading from cloud...');
-                    await StorageManager.loadFromCloud(true); // Silent mode - auto reload
+                    const loaded = await StorageManager.loadFromCloud(true, true); // silent=true, skipReload=true
+
+                    if (loaded) {
+                        console.log('✓ Cloud data loaded successfully (no reload needed)');
+                    }
                 } else {
-                    // Has local data - just sync TO cloud silently
-                    console.log('Local data exists, syncing TO cloud in background...');
+                    // Has local data - DISABLED auto-sync to prevent 403 errors
+                    console.log('Local data exists. Use sync button to manually sync to cloud.');
+
+                    // TEMPORARY: Disable auto-sync on login
+                    // The background sync was triggering 403 errors due to stale file IDs
+                    // TODO: Re-enable once file verification is confirmed working in production
+                    /*
                     StorageManager.syncToCloud().then(() => {
                         console.log('Background sync completed');
                     }).catch(err => {
                         console.error('Background sync failed:', err);
                     });
+                    */
                 }
             } else {
                 console.log('Google Drive not authenticated. Use sync button to authenticate.');

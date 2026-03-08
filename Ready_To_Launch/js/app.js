@@ -12,19 +12,26 @@ const App = {
      * Initialize application
      */
     init() {
+        // Prevent double initialization
+        if (sessionStorage.getItem('appInitialized') === 'true') {
+            console.log('App already initialized, skipping');
+            return;
+        }
+        sessionStorage.setItem('appInitialized', 'true');
+
         // Set default as of date to today
         this.currentAsOfDate = new Date().toISOString().split('T')[0];
-        
+
         // Try to restore from session storage
         const savedDate = sessionStorage.getItem('asOfDate');
         if (savedDate) {
             this.currentAsOfDate = savedDate;
         }
-        
+
         console.log('Initializing Portfolio Manager Application...');
         console.log('Version: 1.0.0');
         console.log('Phase: 1 - Foundation Complete');
-        
+
         // Setup navigation immediately - if user can see the app, they're authenticated
         this.setupNavigation();
         console.log('Navigation setup complete');
@@ -2695,11 +2702,15 @@ window.updateAllocationTotal = function() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Setting up application...');
 
-    // Initialize app after brief delay for auth
+    // NOTE: App.init() is now called by AuthManager.unlock() after cloud sync
+    // Fallback for page refresh while logged in
     setTimeout(() => {
-        console.log('Initializing App...');
-        App.init();
-    }, 100);
+        if (sessionStorage.getItem('sessionActive') === 'true' &&
+            !sessionStorage.getItem('appInitialized')) {
+            console.log('Session active but app not initialized - initializing now');
+            App.init();
+        }
+    }, 500);
 
     // Setup Google Drive sync button
     const syncButton = document.getElementById('syncButton');

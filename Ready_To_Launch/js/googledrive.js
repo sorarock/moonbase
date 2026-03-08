@@ -92,12 +92,19 @@ const GoogleDriveManager = {
                         this.isAuthenticated = true;
                         console.log('✓ Google Drive authenticated');
 
-                        // Save user email to settings
-                        this.getUserInfo().then(userInfo => {
-                            const settings = StorageManager.getSettings();
-                            settings.googleEmail = userInfo.emailAddress;
-                            StorageManager.saveSettings(settings);
-                        });
+                        // Save user email to settings (with delay for gapi client readiness)
+                        setTimeout(async () => {
+                            try {
+                                const userInfo = await this.getUserInfo();
+                                const settings = StorageManager.getSettings();
+                                settings.googleEmail = userInfo.emailAddress;
+                                StorageManager.saveSettings(settings);
+                                console.log('✓ User email saved:', userInfo.emailAddress);
+                            } catch (error) {
+                                console.warn('Failed to get user info after authentication:', error);
+                                // Not critical - continue without email
+                            }
+                        }, 150);
                     }
                 });
 
@@ -146,7 +153,10 @@ const GoogleDriveManager = {
      * @returns {Promise<boolean>} Success status
      */
     async authenticate() {
+        console.log('Starting OAuth authentication flow...');
+
         if (!this.gisInitialized) {
+            console.log('Initializing GIS client first...');
             await this.init();
         }
 
@@ -161,8 +171,10 @@ const GoogleDriveManager = {
 
                     // Resolve promise
                     if (response.error) {
+                        console.error('OAuth authentication failed:', response.error);
                         reject(new Error(response.error));
                     } else {
+                        console.log('OAuth authentication successful');
                         resolve(true);
                     }
 
@@ -171,6 +183,7 @@ const GoogleDriveManager = {
                 };
 
                 // Trigger OAuth flow
+                console.log('Requesting access token...');
                 this.tokenClient.requestAccessToken({ prompt: '' });
 
             } catch (error) {
@@ -211,7 +224,31 @@ const GoogleDriveManager = {
             const close_delim = "\r\n--" + boundary + "--";
 
             // Check if file already exists
-            const existingFile = await this.findFile(filename);
+            let existingFile = await this.findFile(filename);
+
+            // Verify existing file is actually in appDataFolder
+            if (existingFile) {
+                try {
+                    console.log(`Verifying file ${filename} (ID: ${existingFile.id}) is in appDataFolder...`);
+                    const fileDetails = await gapi.client.drive.files.get({
+                        fileId: existingFile.id,
+                        fields: 'id, name, parents'
+                    });
+
+                    const parents = fileDetails.result.parents || [];
+                    const isInAppData = parents.includes('appDataFolder');
+
+                    if (!isInAppData) {
+                        console.warn(`⚠️ File ${filename} found but not in appDataFolder (parents: ${parents.join(', ')}). Creating new file instead.`);
+                        existingFile = null; // Force create new file
+                    } else {
+                        console.log(`✓ File ${filename} verified in appDataFolder`);
+                    }
+                } catch (verifyError) {
+                    console.warn(`Failed to verify file ${filename}, will create new file:`, verifyError);
+                    existingFile = null; // Force create new file on verification error
+                }
+            }
 
             const metadata = {
                 name: filename,
@@ -229,20 +266,50 @@ const GoogleDriveManager = {
                 close_delim;
 
             let response;
+            let retryWithNewFile = false;
 
-            if (existingFile) {
-                // Update existing file
-                response = await gapi.client.request({
-                    path: '/upload/drive/v3/files/' + existingFile.id,
-                    method: 'PATCH',
-                    params: { uploadType: 'multipart' },
-                    headers: {
-                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-                    },
-                    body: multipartRequestBody
-                });
-            } else {
-                // Create new file
+            try {
+                if (existingFile) {
+                    // Update existing file
+                    console.log(`Updating existing file ${filename}...`);
+                    response = await gapi.client.request({
+                        path: '/upload/drive/v3/files/' + existingFile.id,
+                        method: 'PATCH',
+                        params: { uploadType: 'multipart' },
+                        headers: {
+                            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                        },
+                        body: multipartRequestBody
+                    });
+                    console.log(`✓ File ${filename} updated successfully`);
+                } else {
+                    // Create new file
+                    console.log(`Creating new file ${filename}...`);
+                    response = await gapi.client.request({
+                        path: '/upload/drive/v3/files',
+                        method: 'POST',
+                        params: { uploadType: 'multipart' },
+                        headers: {
+                            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                        },
+                        body: multipartRequestBody
+                    });
+                    console.log(`✓ File ${filename} created successfully`);
+                }
+            } catch (uploadError) {
+                // Handle 403 permission errors specifically
+                if (uploadError.status === 403 && existingFile) {
+                    console.error(`⚠️ Permission denied (403) when updating ${filename}. File may be outside appDataFolder scope.`);
+                    console.log(`Retrying by creating a new file instead...`);
+                    retryWithNewFile = true;
+                } else {
+                    throw uploadError; // Re-throw other errors
+                }
+            }
+
+            // Retry with new file creation if 403 occurred
+            if (retryWithNewFile) {
+                console.log(`Creating new file ${filename} after 403 error...`);
                 response = await gapi.client.request({
                     path: '/upload/drive/v3/files',
                     method: 'POST',
@@ -252,6 +319,7 @@ const GoogleDriveManager = {
                     },
                     body: multipartRequestBody
                 });
+                console.log(`✓ File ${filename} created successfully (retry)`);
             }
 
             return response.result.id;
@@ -302,11 +370,17 @@ const GoogleDriveManager = {
                 spaces: 'appDataFolder',
                 fields: 'files(id, name, modifiedTime)',
                 pageSize: 100,
-                q: `name='${filename}'`
+                q: `name='${filename}' and trashed=false`
             });
 
             const files = response.result.files;
-            return files && files.length > 0 ? files[0] : null;
+            if (files && files.length > 0) {
+                console.log(`Found file ${filename} with ID: ${files[0].id}`);
+                return files[0];
+            }
+
+            console.log(`No file found for: ${filename}`);
+            return null;
 
         } catch (error) {
             console.error(`Failed to find file ${filename}:`, error);
@@ -339,6 +413,11 @@ const GoogleDriveManager = {
      * @returns {Promise<boolean>} Success status
      */
     async syncToCloud() {
+        // Keep session alive during sync operation
+        if (typeof AuthManager !== 'undefined' && typeof AuthManager.resetActivityTimer === 'function') {
+            AuthManager.resetActivityTimer();
+        }
+
         if (!this.isAuthenticated) {
             console.log('Not authenticated, attempting to authenticate...');
             try {
@@ -388,9 +467,10 @@ const GoogleDriveManager = {
     /**
      * Load all data FROM Google Drive
      * @param {boolean} silent - If true, skip reload prompt (for auto-sync)
+     * @param {boolean} skipReload - If true, don't reload page (for login sync)
      * @returns {Promise<boolean>} Success status
      */
-    async loadFromCloud(silent = false) {
+    async loadFromCloud(silent = false, skipReload = false) {
         if (!this.isAuthenticated) {
             console.log('Not authenticated, attempting to authenticate...');
             try {
@@ -402,7 +482,10 @@ const GoogleDriveManager = {
         }
 
         try {
-            Utils.showNotification('Loading from Google Drive...', 'info', 1000);
+            // Only show notification if not during login sync
+            if (!skipReload) {
+                Utils.showNotification('Loading from Google Drive...', 'info', 1000);
+            }
             console.log('Loading data from cloud...');
 
             let filesLoaded = 0;
@@ -422,6 +505,14 @@ const GoogleDriveManager = {
 
             if (filesLoaded > 0) {
                 console.log(`✓ Loaded ${filesLoaded} files from Google Drive`);
+
+                // Check if we should skip reload (during login)
+                if (skipReload) {
+                    console.log('Cloud data loaded into localStorage (no reload - initializing app next)');
+                    return true;
+                }
+
+                // Manual sync - existing behavior
                 Utils.showNotification(`✓ Loaded ${filesLoaded} files from cloud`, 'success');
 
                 // Reload page to reflect changes (skip prompt if silent mode)
@@ -436,13 +527,17 @@ const GoogleDriveManager = {
                 }
                 return true;
             } else {
-                Utils.showNotification('No data found in Google Drive', 'warning');
+                if (!skipReload) {
+                    Utils.showNotification('No data found in Google Drive', 'warning');
+                }
                 return false;
             }
 
         } catch (error) {
             console.error('Failed to load from cloud:', error);
-            Utils.showNotification('Failed to load from Google Drive', 'error');
+            if (!skipReload) {
+                Utils.showNotification('Failed to load from Google Drive', 'error');
+            }
             return false;
         }
     },

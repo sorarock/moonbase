@@ -4,12 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Investment Portfolio Management System">
+
+    <!-- Disable browser caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>Portfolio Manager</title>
-    
+
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/pages.css">
+    <link rel="stylesheet" href="css/main.css?v=20250308003">
+    <link rel="stylesheet" href="css/components.css?v=20250308003">
+    <link rel="stylesheet" href="css/pages.css?v=20250308003">
     
     <!-- External Libraries via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -22,6 +28,20 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
+    <!-- Version check and cache bypass -->
+    <script>
+    const CURRENT_VERSION = '20250308003'; // Increment this on every update
+    const storedVersion = sessionStorage.getItem('appVersion');
+    if (storedVersion && storedVersion !== CURRENT_VERSION) {
+        console.log('App version changed from', storedVersion, 'to', CURRENT_VERSION);
+        sessionStorage.setItem('appVersion', CURRENT_VERSION);
+        console.log('Forcing cache bypass reload...');
+        location.reload(true);
+    } else if (!storedVersion) {
+        sessionStorage.setItem('appVersion', CURRENT_VERSION);
+    }
+    </script>
+
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
         <div class="loading-content">
@@ -1539,20 +1559,20 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="js/utils.js"></script>
-    <script src="js/googledrive.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/portfolio.js"></script>
-    <script src="js/accounts.js"></script>
-    <script src="js/fifo.js"></script>
-    <script src="js/transactions.js"></script>
-    <script src="js/prices.js"></script>
-    <script src="js/autorefresh.js"></script>
-    <script src="js/planning.js"></script>
-    <script src="js/rebalancing.js"></script>
-    <script src="js/reports.js"></script>
-    <script src="js/export.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/utils.js?v=20250308003"></script>
+    <script src="js/googledrive.js?v=20250308003"></script>
+    <script src="js/storage.js?v=20250308003"></script>
+    <script src="js/auth.js?v=20250308003"></script>
+    <script src="js/portfolio.js?v=20250308003"></script>
+    <script src="js/accounts.js?v=20250308003"></script>
+    <script src="js/fifo.js?v=20250308003"></script>
+    <script src="js/transactions.js?v=20250308003"></script>
+    <script src="js/prices.js?v=20250308003"></script>
+    <script src="js/autorefresh.js?v=20250308003"></script>
+    <script src="js/planning.js?v=20250308003"></script>
+    <script src="js/rebalancing.js?v=20250308003"></script>
+    <script src="js/reports.js?v=20250308003"></script>
+    <script src="js/export.js?v=20250308003"></script>
+    <script src="js/app.js?v=20250308003"></script>
 </body>
 </html>
