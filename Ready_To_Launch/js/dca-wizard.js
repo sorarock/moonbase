@@ -101,7 +101,8 @@ const DCAWizard = {
 
         // Step 1: Deposit
         const step1 = this.renderStepItem(1, 'Deposit THB', progress.steps.deposit,
-            progress.steps.deposit.recommendedAmount ? `฿${progress.steps.deposit.recommendedAmount.toLocaleString()}` : null);
+            progress.steps.deposit.recommendedAmount ? `฿${progress.steps.deposit.recommendedAmount.toLocaleString()}` : null,
+            'deposit');
 
         // Step 2: Transfer (optional)
         const step2 = this.renderStepItem(2, 'Transfer to FCD', progress.steps.transfer,
