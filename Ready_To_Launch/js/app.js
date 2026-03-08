@@ -2702,6 +2702,10 @@ window.updateAllocationTotal = function() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Setting up application...');
 
+    // Clear initialization flag on page load to allow re-init after reload
+    // This prevents blank pages when browser restores sessionStorage after reload
+    sessionStorage.removeItem('appInitialized');
+
     // NOTE: App.init() is now called by AuthManager.unlock() after cloud sync
     // Fallback for page refresh while logged in
     setTimeout(() => {
