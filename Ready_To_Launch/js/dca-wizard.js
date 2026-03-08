@@ -124,7 +124,6 @@ const DCAWizard = {
      * Render individual step item
      */
     renderStepItem(num, title, stepData, subtitle, stepName) {
-        const canStart = this.canStartStep(num, stepData);
         const isCompleted = stepData.completed;
 
         let statusIcon = '○';
@@ -132,7 +131,7 @@ const DCAWizard = {
         if (isCompleted) {
             statusIcon = '✓';
             statusClass = 'completed';
-        } else if (canStart) {
+        } else {
             statusIcon = '▶';
             statusClass = 'current';
         }
@@ -143,35 +142,28 @@ const DCAWizard = {
             ? `<div class="step-details">${subtitle}</div>`
             : '';
 
-        const action = isCompleted
-            ? `<button class="btn-sm" onclick="DCAWizard.viewStep('${stepName || num}')">View</button>`
-            : canStart
-            ? `<button class="btn-primary btn-sm" onclick="DCAWizard.startStep('${stepName || num}')">Start →</button>`
-            : `<div class="step-locked">Locked</div>`;
+        // Make entire card clickable
+        const clickHandler = `onclick="DCAWizard.startStep('${stepName || num}')"`;
 
         return `
-            <div class="step-item ${statusClass}">
+            <div class="step-item ${statusClass} step-item-clickable" ${clickHandler}>
                 <div class="step-icon">${statusIcon}</div>
                 <div class="step-content">
                     <div class="step-title">${num}. ${title}</div>
                     ${details}
                 </div>
-                <div class="step-action">${action}</div>
+                <div class="step-action">
+                    <div class="step-arrow">→</div>
+                </div>
             </div>
         `;
     },
 
     /**
-     * Check if step can be started
+     * Check if step can be started (always true now - no dependencies)
      */
     canStartStep(stepNum) {
-        const progress = this.getProgress(this.currentPortfolioId);
-
-        if (stepNum === 1) return true; // Deposit always available
-        if (stepNum === 2) return progress.steps.deposit.completed; // Transfer after deposit
-        if (stepNum === 3) return progress.steps.deposit.completed; // Buy after deposit (transfer optional)
-
-        return false;
+        return true; // All steps always accessible
     },
 
     /**
@@ -485,14 +477,12 @@ const DCAWizard = {
 
         if (portfolio.assets) {
             portfolio.assets.forEach(asset => {
-                const template = templates[asset.id];
-                if (template) {
-                    const assetData = { ...asset, template };
-                    if (asset.currency === 'USD') {
-                        usdAssets.push(assetData);
-                    } else if (asset.currency === 'THB') {
-                        thbAssets.push(assetData);
-                    }
+                const template = templates[asset.id] || {}; // Use empty object if no template exists
+                const assetData = { ...asset, template };
+                if (asset.currency === 'USD') {
+                    usdAssets.push(assetData);
+                } else if (asset.currency === 'THB') {
+                    thbAssets.push(assetData);
                 }
             });
         }
@@ -518,7 +508,7 @@ const DCAWizard = {
      * Render asset card
      */
     renderAssetCard(asset, currency) {
-        const template = asset.template;
+        const template = asset.template || {}; // Handle missing template
         const amount = template.lastAmount || 0;
         const lastDate = template.lastDate ? Utils.formatDate(template.lastDate) : 'Never';
         const currencySymbol = currency === 'USD' ? '$' : '฿';

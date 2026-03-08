@@ -138,14 +138,48 @@
     border: 2px solid var(--color-border, #e5e7eb);
 }
 
+/* Clickable step cards */
+.step-item-clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.step-item-clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.step-item-clickable:active {
+    transform: scale(0.98);
+}
+
 .step-item.completed {
     border-color: #10b981;
     background: #ecfdf5;
 }
 
+.step-item-clickable.completed:hover {
+    background: #d1fae5;
+    border-color: #059669;
+}
+
 .step-item.current {
     border-color: var(--color-primary, #3b82f6);
     background: #eff6ff;
+}
+
+.step-item-clickable.current:hover {
+    background: #dbeafe;
+    border-color: #2563eb;
+}
+
+.step-item.pending {
+    /* No special background for pending */
+}
+
+.step-item-clickable.pending:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
 }
 
 .step-icon {
@@ -192,6 +226,17 @@
 
 .step-action {
     flex-shrink: 0;
+}
+
+.step-arrow {
+    font-size: 1.5rem;
+    color: var(--color-text-secondary, #6b7280);
+    transition: transform 0.2s ease;
+}
+
+.step-item-clickable:hover .step-arrow {
+    transform: translateX(4px);
+    color: var(--color-primary, #3b82f6);
 }
 
 .step-locked {
