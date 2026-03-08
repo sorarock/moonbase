@@ -2712,37 +2712,84 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 500);
 
-    // Setup Google Drive sync button
-    const syncButton = document.getElementById('syncButton');
-    if (syncButton) {
-        syncButton.addEventListener('click', async () => {
-            const syncStatus = document.getElementById('syncStatus');
+    // Setup Google Drive Upload button
+    const uploadButton = document.getElementById('uploadButton');
+    if (uploadButton) {
+        uploadButton.addEventListener('click', async () => {
+            const uploadStatus = document.getElementById('uploadStatus');
 
             try {
-                // Show syncing status
-                if (syncStatus) {
-                    syncStatus.className = 'sync-status syncing';
+                // Show uploading status
+                if (uploadStatus) {
+                    uploadStatus.className = 'sync-status syncing';
                 }
-                syncButton.disabled = true;
+                uploadButton.disabled = true;
 
-                // Sync to Google Drive
+                // Upload to Google Drive
                 const success = await StorageManager.syncToCloud();
 
                 // Update status
-                if (success && syncStatus) {
-                    syncStatus.className = 'sync-status synced';
+                if (success && uploadStatus) {
+                    uploadStatus.className = 'sync-status synced';
                     setTimeout(() => {
-                        syncStatus.className = 'sync-status';
+                        uploadStatus.className = 'sync-status';
                     }, 3000);
                 }
 
             } catch (error) {
-                console.error('Sync error:', error);
-                if (syncStatus) {
-                    syncStatus.className = 'sync-status offline';
+                console.error('Upload error:', error);
+                if (uploadStatus) {
+                    uploadStatus.className = 'sync-status offline';
                 }
             } finally {
-                syncButton.disabled = false;
+                uploadButton.disabled = false;
+            }
+        });
+    }
+
+    // Setup Google Drive Download button
+    const downloadButton = document.getElementById('downloadButton');
+    if (downloadButton) {
+        downloadButton.addEventListener('click', async () => {
+            const downloadStatus = document.getElementById('downloadStatus');
+
+            // Show confirmation dialog
+            const confirmed = confirm(
+                'Download from Cloud?\n\n' +
+                'This will overwrite your local data with data from Google Drive.\n\n' +
+                'Continue?'
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                // Show downloading status
+                if (downloadStatus) {
+                    downloadStatus.className = 'sync-status syncing';
+                }
+                downloadButton.disabled = true;
+
+                // Download from Google Drive
+                const success = await StorageManager.loadFromCloud(false, false);
+
+                // Update status and reload page
+                if (success) {
+                    Utils.showNotification('Data downloaded from cloud. Reloading...', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                }
+
+            } catch (error) {
+                console.error('Download error:', error);
+                if (downloadStatus) {
+                    downloadStatus.className = 'sync-status offline';
+                }
+                Utils.showNotification('Failed to download from cloud', 'error');
+            } finally {
+                downloadButton.disabled = false;
             }
         });
     }
