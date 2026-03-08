@@ -202,7 +202,7 @@ const DCAWizard = {
         const progress = this.getProgress(this.currentPortfolioId);
 
         // Pre-fill account and amount
-        const recommendedAccount = accounts.find(a => a.currency === 'THB' && a.type === 'Savings');
+        const recommendedAccount = accounts.find(a => a.currency === 'THB' && a.type === 'thb_savings');
         const recommendedAmount = progress.steps.deposit.recommendedAmount || 5000;
 
         // Populate account dropdown
@@ -313,8 +313,8 @@ const DCAWizard = {
         const progress = this.getProgress(this.currentPortfolioId);
 
         // Find THB and FCD accounts
-        const thbAccount = accounts.find(a => a.currency === 'THB' && a.type === 'Savings');
-        const fcdAccount = accounts.find(a => a.currency === 'USD' && a.type === 'FCD_Account');
+        const thbAccount = accounts.find(a => a.currency === 'THB' && a.type === 'thb_savings');
+        const fcdAccount = accounts.find(a => a.currency === 'USD' && a.type === 'fcd_account');
 
         if (!thbAccount || !fcdAccount) {
             Utils.showNotification('Missing THB Savings or FCD account', 'error');
@@ -462,8 +462,8 @@ const DCAWizard = {
         const progress = this.getProgress(this.currentPortfolioId);
 
         // Get account balances
-        const fcdAccount = accounts.find(a => a.currency === 'USD' && a.type === 'FCD_Account');
-        const thbAccount = accounts.find(a => a.currency === 'THB' && a.type === 'Savings');
+        const fcdAccount = accounts.find(a => a.currency === 'USD' && a.type === 'fcd_account');
+        const thbAccount = accounts.find(a => a.currency === 'THB' && a.type === 'thb_savings');
 
         // Update balance display
         let balanceText = '';
@@ -582,9 +582,9 @@ const DCAWizard = {
         const accounts = StorageManager.getAccounts().filter(a => a.portfolioId === this.currentPortfolioId);
 
         if (asset.currency === 'USD') {
-            return accounts.find(a => a.currency === 'USD' && a.type === 'FCD_Account');
+            return accounts.find(a => a.currency === 'USD' && a.type === 'fcd_account');
         } else if (asset.currency === 'THB') {
-            return accounts.find(a => a.currency === 'THB' && a.type === 'Savings');
+            return accounts.find(a => a.currency === 'THB' && a.type === 'thb_savings');
         }
 
         return null;
