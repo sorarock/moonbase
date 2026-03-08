@@ -198,6 +198,24 @@ const App = {
                 this.loadReports();
                 break;
         }
+
+        // Update DCA FAB visibility
+        this.updateDCAFabVisibility(pageName);
+    },
+
+    /**
+     * Update DCA FAB button visibility based on current page
+     */
+    updateDCAFabVisibility(pageName) {
+        const fab = document.getElementById('fabDCA');
+        if (!fab) return;
+
+        // Show FAB only on dashboard and transactions pages
+        if (pageName === 'dashboard' || pageName === 'transactions') {
+            fab.style.display = 'flex';
+        } else {
+            fab.style.display = 'none';
+        }
     },
 
     /**

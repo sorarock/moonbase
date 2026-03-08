@@ -13,9 +13,9 @@
     <title>Portfolio Manager</title>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/main.css?v=20250308005">
-    <link rel="stylesheet" href="css/components.css?v=20250308005">
-    <link rel="stylesheet" href="css/pages.css?v=20250308005">
+    <link rel="stylesheet" href="css/main.css?v=20250308006">
+    <link rel="stylesheet" href="css/components.css?v=20250308006">
+    <link rel="stylesheet" href="css/pages.css?v=20250308006">
     
     <!-- External Libraries via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -1562,21 +1562,204 @@
         </div>
     </div>
 
+    <!-- DCA Wizard (Monthly Investment Entry) -->
+    <div id="dcaWizardSheet" class="dca-wizard-sheet">
+        <div class="dca-wizard-header">
+            <button class="btn-back" onclick="DCAWizard.goBack()"></button>
+            <h3 id="dcaWizardTitle">Monthly DCA Entry</h3>
+            <button class="btn-icon" onclick="DCAWizard.close()">×</button>
+        </div>
+
+        <div class="dca-wizard-content">
+            <!-- Step 1: Portfolio Selection -->
+            <div id="dcaStep_portfolioSelection" style="display: none;">
+                <p style="margin-bottom: 20px; color: var(--color-text-secondary);">
+                    Which portfolio are you investing in this month?
+                </p>
+                <div id="dcaPortfolioGrid" class="portfolio-grid"></div>
+            </div>
+
+            <!-- Step 2: Progress Screen -->
+            <div id="dcaStep_stepProgress" style="display: none;">
+                <div style="margin-bottom: 16px;">
+                    <strong id="dcaPortfolioName" style="font-size: 1.125rem;">Portfolio Name</strong>
+                </div>
+                <h4 style="margin-bottom: 16px;">Monthly DCA Steps:</h4>
+                <div id="dcaStepProgress" class="step-progress-container"></div>
+            </div>
+
+            <!-- Step 3A: Deposit Form -->
+            <div id="dcaStep_depositForm" style="display: none;">
+                <h4 style="margin-bottom: 20px;">Deposit</h4>
+
+                <div class="dca-form-group">
+                    <label>To Account:</label>
+                    <select id="dcaDepositAccount" class="dca-form-input" onchange="DCAWizard.updateDepositCurrency()"></select>
+                </div>
+
+                <div class="dca-form-group">
+                    <label>Amount (<span id="dcaDepositCurrency">THB</span>):</label>
+                    <input type="number" id="dcaDepositAmount" class="dca-form-input" step="0.01" min="0">
+                    <div class="quick-adjust-buttons">
+                        <button class="btn-adjust" onclick="DCAWizard.adjustDepositAmount(1000)">+1000</button>
+                        <button class="btn-adjust" onclick="DCAWizard.adjustDepositAmount(500)">+500</button>
+                        <button class="btn-adjust" onclick="DCAWizard.adjustDepositAmount(-500)">-500</button>
+                        <button class="btn-adjust" onclick="DCAWizard.adjustDepositAmount(-1000)">-1000</button>
+                    </div>
+                </div>
+
+                <div class="date-display">
+                    <strong>Date:</strong> <input type="date" id="dcaDepositDate" class="dca-form-input" style="height: 44px; width: auto; display: inline-block;">
+                </div>
+
+                <button class="btn-primary-large" onclick="DCAWizard.recordDeposit()">
+                    Record Deposit
+                </button>
+            </div>
+
+            <!-- Step 3B: Transfer Form -->
+            <div id="dcaStep_transferForm" style="display: none;">
+                <h4 style="margin-bottom: 20px;">Transfer THB → USD</h4>
+
+                <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">From: <span id="dcaTransferFrom"></span></div>
+                    <div style="color: var(--color-text-secondary); font-size: 0.875rem;">Balance: <span id="dcaTransferFromBalance"></span></div>
+                </div>
+
+                <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 600;">To: <span id="dcaTransferTo"></span></div>
+                </div>
+
+                <div class="dca-form-group">
+                    <label>Amount (THB):</label>
+                    <input type="number" id="dcaTransferAmount" class="dca-form-input" step="0.01" min="0" oninput="DCAWizard.updateTransferCalculation()">
+                    <div style="text-align: center; margin-top: 8px;">
+                        <button class="btn-adjust" onclick="DCAWizard.useAllBalance()">Use All Balance</button>
+                    </div>
+                </div>
+
+                <div class="dca-form-group">
+                    <label>Exchange Rate (THB/USD):</label>
+                    <input type="number" id="dcaTransferRate" class="dca-form-input" step="0.01" min="0" oninput="DCAWizard.updateTransferCalculation()">
+                    <div style="text-align: center; margin-top: 8px;">
+                        <button class="btn-adjust" onclick="DCAWizard.fetchExchangeRate()">📱 Fetch Current Rate</button>
+                    </div>
+                </div>
+
+                <div class="info-display">
+                    <strong>💡 You will receive:</strong>
+                    <div id="dcaTransferUsdAmount" class="value">$0.00 USD</div>
+                </div>
+
+                <div class="date-display">
+                    <strong>Date:</strong> <input type="date" id="dcaTransferDate" class="dca-form-input" style="height: 44px; width: auto; display: inline-block;">
+                </div>
+
+                <button class="btn-primary-large" onclick="DCAWizard.recordTransfer()">
+                    Record Transfer
+                </button>
+            </div>
+
+            <!-- Step 3C: Buy Grid -->
+            <div id="dcaStep_buyGrid" style="display: none;">
+                <h4 style="margin-bottom: 16px;">Buy Investments</h4>
+
+                <div class="balance-display" id="dcaBuyBalances">
+                    • FCD: $0.00 USD
+                    • THB Savings: ฿0 THB
+                </div>
+
+                <div class="asset-section">
+                    <div class="asset-section-title">USD Assets (buy from FCD):</div>
+                    <div id="dcaBuyUsdGrid" class="asset-grid"></div>
+                </div>
+
+                <div class="asset-section">
+                    <div class="asset-section-title">THB Assets (buy from THB Savings):</div>
+                    <div id="dcaBuyThbGrid" class="asset-grid"></div>
+                </div>
+
+                <div style="text-align: center; margin: 20px 0; color: var(--color-text-secondary);">
+                    <span id="dcaBuyPurchasedCount">Purchased: 0/0 assets</span>
+                </div>
+
+                <button class="btn-secondary-large" onclick="DCAWizard.showStepProgress(DCAWizard.getProgress(DCAWizard.currentPortfolioId))">
+                    Done with Purchases
+                </button>
+            </div>
+
+            <!-- Step 3D: Buy Form (Individual Asset) -->
+            <div id="dcaStep_buyForm" style="display: none;">
+                <h4 style="margin-bottom: 16px;">
+                    <span id="dcaBuyAssetName">SPYM</span>
+                </h4>
+                <div style="color: var(--color-text-secondary); margin-bottom: 20px;">
+                    <span id="dcaBuyAssetCurrency">USD</span> Asset
+                </div>
+
+                <div style="background: var(--color-bg-secondary); padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+                    <div style="font-weight: 600; margin-bottom: 4px;">From: <span id="dcaBuyFromAccount"></span></div>
+                    <div id="dcaBuyExchangeRateGroup" style="color: var(--color-text-secondary); font-size: 0.875rem;">
+                        Exchange Rate: <span id="dcaBuyExchangeRate">33.33</span> THB/USD
+                    </div>
+                </div>
+
+                <div class="dca-form-group">
+                    <label>Quantity (shares):</label>
+                    <input type="number" id="dcaBuyQuantity" class="dca-form-input" step="0.00000001" min="0" oninput="DCAWizard.updateBuyTotal()">
+                    <div class="quick-adjust-buttons">
+                        <button class="btn-adjust" onclick="DCAWizard.adjustBuyQuantity(0.01)">+0.01</button>
+                        <button class="btn-adjust" onclick="DCAWizard.adjustBuyQuantity(0.001)">+0.001</button>
+                        <button class="btn-adjust" onclick="DCAWizard.adjustBuyQuantity(-0.001)">-0.001</button>
+                    </div>
+                </div>
+
+                <div class="dca-form-group">
+                    <label>Price per Share:</label>
+                    <input type="number" id="dcaBuyPrice" class="dca-form-input" step="0.000001" min="0" oninput="DCAWizard.updateBuyTotal()">
+                    <div style="text-align: center; margin-top: 8px;">
+                        <button class="btn-adjust" onclick="alert('Price refresh coming soon!')">Refresh Price</button>
+                    </div>
+                </div>
+
+                <div class="summary-box">
+                    <strong>💰 Total Cost:</strong>
+                    <div id="dcaBuyTotal" class="value">$0.00 USD</div>
+                </div>
+
+                <div class="date-display">
+                    <strong>Date:</strong> <input type="date" id="dcaBuyDate" class="dca-form-input" style="height: 44px; width: auto; display: inline-block;">
+                </div>
+
+                <button class="btn-primary-large" onclick="DCAWizard.recordBuy()">
+                    Buy <span id="dcaBuyAssetNameBtn">Asset</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button (FAB) -->
+    <button id="fabDCA" class="fab-dca" onclick="DCAWizard.start()" title="Monthly DCA Entry">
+        ⚡
+    </button>
+
     <!-- JavaScript -->
-    <script src="js/utils.js?v=20250308005"></script>
-    <script src="js/googledrive.js?v=20250308005"></script>
-    <script src="js/storage.js?v=20250308005"></script>
-    <script src="js/auth.js?v=20250308005"></script>
-    <script src="js/portfolio.js?v=20250308005"></script>
-    <script src="js/accounts.js?v=20250308005"></script>
-    <script src="js/fifo.js?v=20250308005"></script>
-    <script src="js/transactions.js?v=20250308005"></script>
-    <script src="js/prices.js?v=20250308005"></script>
-    <script src="js/autorefresh.js?v=20250308005"></script>
-    <script src="js/planning.js?v=20250308005"></script>
-    <script src="js/rebalancing.js?v=20250308005"></script>
-    <script src="js/reports.js?v=20250308005"></script>
-    <script src="js/export.js?v=20250308005"></script>
-    <script src="js/app.js?v=20250308005"></script>
+    <link rel="stylesheet" href="css/dca-wizard.css?v=20250308006">
+    <script src="js/dca-wizard.js?v=20250308006"></script>
+    <script src="js/utils.js?v=20250308006"></script>
+    <script src="js/googledrive.js?v=20250308006"></script>
+    <script src="js/storage.js?v=20250308006"></script>
+    <script src="js/auth.js?v=20250308006"></script>
+    <script src="js/portfolio.js?v=20250308006"></script>
+    <script src="js/accounts.js?v=20250308006"></script>
+    <script src="js/fifo.js?v=20250308006"></script>
+    <script src="js/transactions.js?v=20250308006"></script>
+    <script src="js/prices.js?v=20250308006"></script>
+    <script src="js/autorefresh.js?v=20250308006"></script>
+    <script src="js/planning.js?v=20250308006"></script>
+    <script src="js/rebalancing.js?v=20250308006"></script>
+    <script src="js/reports.js?v=20250308006"></script>
+    <script src="js/export.js?v=20250308006"></script>
+    <script src="js/app.js?v=20250308006"></script>
 </body>
 </html>
