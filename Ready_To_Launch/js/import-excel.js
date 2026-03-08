@@ -262,9 +262,14 @@ const ExcelImporter = {
         const currency = (row['Currency'] || 'USD').toUpperCase();
         const fxRate = parseFloat(row['FX Rate (THB per USD)']) || 1;
 
-        // Total Amount is in USD, calculate THB equivalent
-        const totalAmountUSD = parseFloat(row['Total Amount']) || 0;
-        const totalAmountTHB = totalAmountUSD * fxRate;
+        // For DEPOSIT: totalAmount is USD from Unit column (not Total Amount column)
+        // For WITHDRAW/BUY: totalAmount is Unit × Price
+        let totalAmountUSD;
+        if (type === 'DEPOSIT') {
+            totalAmountUSD = unit;  // Get USD from Unit column
+        } else {
+            totalAmountUSD = unit * price;  // Calculate from Unit × Price
+        }
 
         // For DEPOSIT/WITHDRAW, pricePerUnit should be 1 (not exchange rate)
         // Exchange rate is preserved in exchangeRate field for FIFO tracking
