@@ -77,6 +77,16 @@ const Utils = {
     },
 
     /**
+     * Format date for HTML input fields (YYYY-MM-DD)
+     * @param {Date|string} date - Date to format
+     * @returns {string} Date string in YYYY-MM-DD format
+     */
+    formatDateForInput(date) {
+        const d = date instanceof Date ? date : new Date(date);
+        return d.toISOString().split('T')[0];
+    },
+
+    /**
      * Format percentage
      * @param {number} value - Value to format
      * @param {number} decimals - Number of decimal places
