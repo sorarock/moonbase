@@ -503,19 +503,10 @@ const AuthManager = {
                         console.log('✓ Cloud data loaded successfully (no reload needed)');
                     }
                 } else {
-                    // Has local data - DISABLED auto-sync to prevent 403 errors
+                    // Has local data - manual sync only
+                    // DESIGN DECISION: Auto-sync disabled to prevent data loss in multi-device scenarios
+                    // Users must explicitly choose Upload or Download to prevent accidental overwrites
                     console.log('Local data exists. Use sync button to manually sync to cloud.');
-
-                    // TEMPORARY: Disable auto-sync on login
-                    // The background sync was triggering 403 errors due to stale file IDs
-                    // TODO: Re-enable once file verification is confirmed working in production
-                    /*
-                    StorageManager.syncToCloud().then(() => {
-                        console.log('Background sync completed');
-                    }).catch(err => {
-                        console.error('Background sync failed:', err);
-                    });
-                    */
                 }
             } else {
                 console.log('Google Drive not authenticated. Use sync button to authenticate.');
