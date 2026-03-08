@@ -515,7 +515,7 @@ const DCAWizard = {
 
         return `
             <div class="asset-card" onclick="DCAWizard.showBuyForm('${asset.id}')">
-                <div class="asset-card-symbol">${asset.symbol}</div>
+                <div class="asset-card-symbol">${asset.ticker}</div>
                 <div class="asset-card-amount">${currencySymbol}${amount.toFixed(2)}</div>
                 <div class="asset-card-date">Last: ${lastDate}</div>
             </div>
@@ -539,14 +539,14 @@ const DCAWizard = {
         }
 
         // Update UI
-        document.getElementById('dcaBuyAssetName').textContent = asset.symbol;
+        document.getElementById('dcaBuyAssetName').textContent = asset.ticker;
         document.getElementById('dcaBuyAssetCurrency').textContent = asset.currency;
         document.getElementById('dcaBuyFromAccount').textContent = `${account.name} (${account.currency === 'USD' ? '$' + account.balance.toFixed(2) : '฿' + account.balance.toLocaleString()})`;
 
         // Update button text
         const buyBtn = document.getElementById('dcaBuyAssetNameBtn');
         if (buyBtn) {
-            buyBtn.textContent = asset.symbol;
+            buyBtn.textContent = asset.ticker;
         }
 
         // Pre-fill from template
@@ -660,7 +660,7 @@ const DCAWizard = {
             exchangeRate: exchangeRate,
             date: date,
             fee: 0,
-            notes: `DCA purchase: ${asset.symbol}`
+            notes: `DCA purchase: ${asset.ticker}`
         };
 
         try {
@@ -687,7 +687,7 @@ const DCAWizard = {
                 price: price
             });
 
-            Utils.showNotification(`${asset.symbol} purchased successfully!`, 'success');
+            Utils.showNotification(`${asset.ticker} purchased successfully!`, 'success');
 
             // Return to buy grid
             this.showBuyGrid();
