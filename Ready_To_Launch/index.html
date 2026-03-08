@@ -381,6 +381,28 @@
                         </button>
                     </div>
 
+                    <!-- Import Excel Section -->
+                    <div class="card card-ultra-compact" style="margin-bottom: var(--space-lg); background: #f5f5f5;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 16px;">📥 Import Historical Data</h3>
+                        <p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">Import transactions and FIFO lots from Excel file</p>
+
+                        <input
+                            type="file"
+                            id="excelImportFile"
+                            accept=".xlsx,.xls"
+                            style="display:none"
+                            onchange="ExcelImporter.handleFileSelect(event)"
+                        />
+
+                        <button
+                            class="btn btn-secondary"
+                            onclick="document.getElementById('excelImportFile').click()"
+                            style="padding: 10px 20px; cursor: pointer;"
+                        >
+                            📁 Choose Excel File
+                        </button>
+                    </div>
+
                     <!-- Transaction Filters -->
                     <div class="card card-ultra-compact" style="margin-bottom: var(--space-sm);">
                         <div style="font-weight: 600; margin-bottom: var(--space-sm);">Filters</div>
@@ -1743,12 +1765,29 @@
         ⚡
     </button>
 
+    <!-- Import Preview Modal -->
+    <div id="importPreviewModal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="ExcelImporter.closePreview()"></div>
+        <div class="modal-content" style="max-width: 800px; max-height: 80vh; overflow-y: auto;">
+            <h2>📊 Import Preview</h2>
+            <div id="importPreviewContent"></div>
+            <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="ExcelImporter.closePreview()">
+                    Cancel
+                </button>
+                <button class="btn btn-primary" onclick="ExcelImporter.confirmImport()">
+                    ✓ Import Data
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <link rel="stylesheet" href="css/dca-wizard.css?v=20250308008">
     <script src="js/dca-wizard.js?v=20250308013"></script>
     <script src="js/utils.js?v=20250308011"></script>
     <script src="js/googledrive.js?v=20250308006"></script>
-    <script src="js/storage.js?v=20250308006"></script>
+    <script src="js/storage.js?v=20250308020"></script>
     <script src="js/auth.js?v=20250308006"></script>
     <script src="js/portfolio.js?v=20250308006"></script>
     <script src="js/accounts.js?v=20250308006"></script>
@@ -1760,6 +1799,7 @@
     <script src="js/rebalancing.js?v=20250308006"></script>
     <script src="js/reports.js?v=20250308006"></script>
     <script src="js/export.js?v=20250308006"></script>
+    <script src="js/import-excel.js?v=20250308020"></script>
     <script src="js/app.js?v=20250308006"></script>
 </body>
 </html>

@@ -15,6 +15,8 @@ const StorageManager = {
         POSITIONS: 'positions',
         RATES: 'conversionRates',
         SETTINGS: 'settings',
+        FIFO_LOTS: 'PM_FIFO_LOTS',
+        FIFO_SALES: 'PM_FIFO_SALES',
         CLOUD_FOLDER: 'cloudFolderHandle'
     },
 
@@ -57,6 +59,8 @@ const StorageManager = {
             [this.KEYS.PLANS]: [],
             [this.KEYS.POSITIONS]: [],
             [this.KEYS.RATES]: [],
+            [this.KEYS.FIFO_LOTS]: [],
+            [this.KEYS.FIFO_SALES]: [],
             [this.KEYS.SETTINGS]: {
                 currency: 'THB',
                 theme: 'light',
