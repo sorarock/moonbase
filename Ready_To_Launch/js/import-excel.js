@@ -134,7 +134,7 @@ const ExcelImporter = {
             const row = rows[i];
 
             // Skip rows with zero or empty amount
-            if (!row['Total Amount (THB)'] || row['Total Amount (THB)'] === 0) {
+            if (!row['Total Amount'] || row['Total Amount'] === 0) {
                 console.warn(`Row ${i + 2}: Skipping (zero amount)`);
                 continue;
             }
