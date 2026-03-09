@@ -260,7 +260,19 @@ const ExcelImporter = {
         const unit = parseFloat(row['Unit']) || 0;
         const price = parseFloat(row['Price']) || 0;
         const currency = (row['Currency'] || 'USD').toUpperCase();
+
+        // Debug: Log available columns and FX rate value
+        if (rowIndex === 2) { // Only log for first data row
+            console.log('Transaction row columns:', Object.keys(row));
+            console.log('FX Rate column values:', {
+                'FX Rate (THB per USD)': row['FX Rate (THB per USD)'],
+                'Price': row['Price'],
+                'All columns': row
+            });
+        }
+
         const fxRate = parseFloat(row['FX Rate (THB per USD)']) || 1;
+        console.log(`Row ${rowIndex}: Type=${type}, Unit=${unit}, Price=${price}, FX Rate=${fxRate}`);
 
         // For DEPOSIT: totalAmount is USD from Unit column (not Total Amount column)
         // For WITHDRAW/BUY: totalAmount is Unit × Price
