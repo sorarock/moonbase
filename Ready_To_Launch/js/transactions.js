@@ -654,8 +654,8 @@ const TransactionManager = {
             console.log('⚠️ Using transaction-based cost calculation (FIFO not available)');
         }
 
-        // Add account balances using current exchange rate (for cash portion)
-        // Cash doesn't have a "cost basis" - it's always at current value
+        // Get account balances for "Total Asset Value as of" calculation
+        // NOTE: Do NOT add to totalCostBasisTHB as USD FIFO lots already represent the cost basis of USD in accounts
         let accountBalancesTHB = 0;
         const accounts = AccountManager.getAccountsByPortfolio(portfolioId);
         accounts.forEach(acc => {
@@ -676,11 +676,12 @@ const TransactionManager = {
         });
 
         console.log(`=== Total Asset (Cost) Calculation ===`);
-        console.log(`Cost basis from FIFO/transactions: ฿${totalCostBasisTHB.toFixed(2)}`);
-        console.log(`Account balances: ฿${accountBalancesTHB.toFixed(2)}`);
+        console.log(`Cost basis from FIFO lots: ฿${totalCostBasisTHB.toFixed(2)}`);
+        console.log(`Account balances (for reference): ฿${accountBalancesTHB.toFixed(2)}`);
 
-        // Total Asset (Cost) = FIFO cost basis + current cash value
-        const totalAssetValue = totalCostBasisTHB + accountBalancesTHB;
+        // Total Asset (Cost) = FIFO cost basis ONLY
+        // Do NOT add account balances - they're already represented in FIFO lots for USD
+        const totalAssetValue = totalCostBasisTHB;
 
         console.log(`Total Asset (Cost): ฿${totalAssetValue.toFixed(2)}`);
 
