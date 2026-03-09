@@ -634,6 +634,9 @@ const ExcelImporter = {
 
         // Recalculate positions
         this.recalculatePositions();
+
+        // Recalculate account balances from all transactions
+        this.recalculateAccountBalances();
     },
 
     /**
@@ -680,6 +683,23 @@ const ExcelImporter = {
         StorageManager.saveToLocal('positions', updatedPositions);
 
         console.log(`Recalculated ${updatedPositions.length} positions`);
+    },
+
+    /**
+     * Recalculate account balances from all transactions
+     * This ensures account.balance field matches the sum of all transactions
+     */
+    recalculateAccountBalances() {
+        const accounts = AccountManager.getAllAccounts();
+        const currentDate = new Date();
+
+        accounts.forEach(account => {
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, currentDate);
+            account.balance = calculatedBalance;
+        });
+
+        StorageManager.saveAccounts(accounts);
+        console.log('✓ Account balances recalculated after import');
     },
 
     /**

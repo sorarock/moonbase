@@ -3672,7 +3672,14 @@ function loadAllPortfolioAccounts(portfolioId) {
     const accounts = AccountManager.getAllAccounts().filter(acc => acc.portfolioId === portfolioId);
     const accountSelect = document.getElementById('txnAccount');
     accountSelect.innerHTML = '<option value="">No Account (Manual)</option>' +
-        accounts.map(acc => `<option value="${acc.id}" data-currency="${acc.currency}">${acc.name} - ${Utils.formatCurrency(acc.balance, acc.currency)}</option>`).join('');
+        accounts.map(acc => {
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(acc.id, new Date());
+            return `<option value="${acc.id}" data-currency="${acc.currency}">${acc.name} - ${Utils.formatCurrency(calculatedBalance, acc.currency)}</option>`;
+        }).join('');
+
+    // Add event listener for account selection change to auto-populate amounts
+    accountSelect.removeEventListener('change', handleAccountSelectionChange); // Remove old listener first
+    accountSelect.addEventListener('change', handleAccountSelectionChange);
 }
 
 function filterAccountsByCurrency() {
@@ -3695,7 +3702,10 @@ function filterAccountsByCurrency() {
     
     const accountSelect = document.getElementById('txnAccount');
     accountSelect.innerHTML = '<option value="">No Account (Manual)</option>' +
-        accounts.map(acc => `<option value="${acc.id}" data-currency="${acc.currency}">${acc.name} - ${Utils.formatCurrency(acc.balance, acc.currency)}</option>`).join('');
+        accounts.map(acc => {
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(acc.id, new Date());
+            return `<option value="${acc.id}" data-currency="${acc.currency}">${acc.name} - ${Utils.formatCurrency(calculatedBalance, acc.currency)}</option>`;
+        }).join('');
     
     // Show notification if no matching accounts
     if (accounts.length === 0) {
@@ -3847,7 +3857,10 @@ function loadDestinationAccounts() {
     );
     
     destinationSelect.innerHTML = '<option value="">Select Destination Account</option>' +
-        accounts.map(acc => `<option value="${acc.id}" data-currency="${acc.currency}">${acc.name} - ${Utils.formatCurrency(acc.balance, acc.currency)}</option>`).join('');
+        accounts.map(acc => {
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(acc.id, new Date());
+            return `<option value="${acc.id}" data-currency="${acc.currency}">${acc.name} - ${Utils.formatCurrency(calculatedBalance, acc.currency)}</option>`;
+        }).join('');
     
     if (accounts.length === 0) {
         Utils.showNotification('You need at least 2 accounts to make a transfer', 'warning');
@@ -3924,6 +3937,28 @@ window.calculateTxnTotal = function() {
     // Use higher precision for total calculation to maintain accuracy
     document.getElementById('txnTotal').value = total.toFixed(6);
 };
+
+/**
+ * Handle account selection change in transaction form
+ * Auto-populates total amount for WITHDRAW transactions
+ */
+function handleAccountSelectionChange(event) {
+    const selectedAccountId = event.target.value;
+    const txnType = document.getElementById('txnType').value;
+
+    // Auto-populate total amount for WITHDRAW transactions
+    if (txnType === 'WITHDRAW' && selectedAccountId) {
+        const account = AccountManager.getAccount(selectedAccountId);
+        if (account) {
+            const balance = AccountManager.calculateBalanceAsOfDate(selectedAccountId, new Date());
+            const totalInput = document.getElementById('txnTotal');
+            totalInput.value = balance.toFixed(2);
+
+            // Update currency display
+            updateTransactionCurrency();
+        }
+    }
+}
 
 function setupTransactionFormHandler() {
     const form = document.getElementById('recordTransactionForm');
