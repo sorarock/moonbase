@@ -658,51 +658,51 @@ const ExcelImporter = {
             FIFOManager.saveLots(newLots);
 
             console.log(`Imported ${this.parsedFIFOLots.length} FIFO lots from US FCD sheet (total: ${newLots.length})`);
-        }
+        } else {
+            // Create USD FIFO lots for DEPOSIT transactions ONLY if there's no "US FCD" sheet
+            // This ensures DEPOSIT transactions create FIFO lots when US FCD sheet is missing
+            const depositTransactions = this.parsedTransactions.filter(t =>
+                t.type === 'DEPOSIT' && t.currency === 'USD'
+            );
 
-        // Create USD FIFO lots for DEPOSIT transactions
-        // This ensures DEPOSIT transactions create FIFO lots even if there's no "US FCD" sheet
-        const depositTransactions = this.parsedTransactions.filter(t =>
-            t.type === 'DEPOSIT' && t.currency === 'USD'
-        );
+            if (depositTransactions.length > 0 && window.FIFOManager) {
+                console.log(`No US FCD sheet found. Creating USD FIFO lots for ${depositTransactions.length} DEPOSIT transactions...`);
 
-        if (depositTransactions.length > 0 && window.FIFOManager) {
-            console.log(`Creating USD FIFO lots for ${depositTransactions.length} DEPOSIT transactions...`);
+                const existingLots = FIFOManager.getAllLots() || [];
 
-            const existingLots = FIFOManager.getAllLots() || [];
+                depositTransactions.forEach(txn => {
+                    try {
+                        // Create lot manually (since createCurrencyLot only works with TRANSFER type)
+                        const lot = {
+                            id: Utils.generateId(),
+                            portfolioId: txn.portfolioId,
+                            assetId: 'USD_CURRENCY',
+                            accountId: txn.accountId,
+                            transactionId: txn.id,
+                            purchaseDate: txn.date,
+                            quantity: txn.totalAmount,
+                            remainingQuantity: txn.totalAmount,
+                            pricePerUnit: txn.exchangeRate,
+                            currency: 'USD',
+                            exchangeRate: txn.exchangeRate,
+                            costBasisTHB: txn.totalAmount * txn.exchangeRate,
+                            status: 'OPEN',
+                            createdAt: new Date().toISOString(),
+                            source: 'DEPOSIT',
+                            description: txn.description || 'Imported deposit'
+                        };
 
-            depositTransactions.forEach(txn => {
-                try {
-                    // Create lot manually (since createCurrencyLot only works with TRANSFER type)
-                    const lot = {
-                        id: Utils.generateId(),
-                        portfolioId: txn.portfolioId,
-                        assetId: 'USD_CURRENCY',
-                        accountId: txn.accountId,
-                        transactionId: txn.id,
-                        purchaseDate: txn.date,
-                        quantity: txn.totalAmount,
-                        remainingQuantity: txn.totalAmount,
-                        pricePerUnit: txn.exchangeRate,
-                        currency: 'USD',
-                        exchangeRate: txn.exchangeRate,
-                        costBasisTHB: txn.totalAmount * txn.exchangeRate,
-                        status: 'OPEN',
-                        createdAt: new Date().toISOString(),
-                        source: 'DEPOSIT',
-                        description: txn.description || 'Imported deposit'
-                    };
+                        existingLots.push(lot);
+                        console.log(`✓ Created USD FIFO lot: ${txn.totalAmount} USD @ ${txn.exchangeRate.toFixed(4)} THB/USD`);
+                    } catch (error) {
+                        console.warn(`Failed to create USD FIFO lot for transaction ${txn.id}:`, error.message);
+                    }
+                });
 
-                    existingLots.push(lot);
-                    console.log(`✓ Created USD FIFO lot: ${txn.totalAmount} USD @ ${txn.exchangeRate.toFixed(4)} THB/USD`);
-                } catch (error) {
-                    console.warn(`Failed to create USD FIFO lot for transaction ${txn.id}:`, error.message);
-                }
-            });
-
-            // Save all lots at once
-            FIFOManager.saveLots(existingLots);
-            console.log(`✓ Total FIFO lots after import: ${existingLots.length}`);
+                // Save all lots at once
+                FIFOManager.saveLots(existingLots);
+                console.log(`✓ Total FIFO lots after import: ${existingLots.length}`);
+            }
         }
 
         // Recalculate positions
