@@ -579,38 +579,47 @@ const TransactionManager = {
         let totalDividends = 0;
 
         filteredTransactions.forEach(t => {
-            // Convert to THB using stored exchange rate
-            let amountInTHB = t.totalAmount;
-            let feeInTHB = t.fee || 0;
-            
-            if (t.currency === 'USD') {
-                // Use actual exchange rate from transfers, or fallback to 35
-                const rate = exchangeRates.USD_TO_THB || 35;
-                amountInTHB = t.totalAmount * rate;
-                feeInTHB = (t.fee || 0) * rate;
-            }
-
-            if (t.type === 'BUY') {
-                // Track total amount spent on buying assets (including fees)
-                totalBuyAmount += (amountInTHB + feeInTHB);
-                totalFees += feeInTHB;
-                
-            } else if (t.type === 'SELL') {
-                // Subtract proceeds from buy amount (asset was sold)
-                totalBuyAmount -= (amountInTHB - feeInTHB);
-                totalFees += feeInTHB;
-                
-            } else if (t.type === 'DIVIDEND') {
-                // Track dividends separately
-                totalDividends += amountInTHB;
-                
-            } else if (t.type === 'TRANSFER') {
-                // Track transfer fees only (amount already moved between accounts)
-                totalFees += feeInTHB;
-                
-            } else if (t.type === 'DEPOSIT') {
-                // Only count actual deposits
+            if (t.type === 'DEPOSIT') {
+                // Use historical exchange rate from transaction record
+                let amountInTHB = t.totalAmount;
+                if (t.currency === 'USD') {
+                    // Use historical rate stored in transaction, not current global rate
+                    const historicalRate = t.exchangeRate || 1;
+                    amountInTHB = t.totalAmount * historicalRate;
+                    console.log(`DEPOSIT: ${t.totalAmount} USD × ${historicalRate.toFixed(4)} = ฿${amountInTHB.toFixed(2)} (historical)`);
+                }
                 totalDeposits += amountInTHB;
+
+            } else {
+                // For other transaction types, convert to THB
+                let amountInTHB = t.totalAmount;
+                let feeInTHB = t.fee || 0;
+
+                if (t.currency === 'USD') {
+                    // Use transaction's exchange rate if available, otherwise use current rate
+                    const rate = t.exchangeRate || exchangeRates.USD_TO_THB || 35;
+                    amountInTHB = t.totalAmount * rate;
+                    feeInTHB = (t.fee || 0) * rate;
+                }
+
+                if (t.type === 'BUY') {
+                    // Track total amount spent on buying assets (including fees)
+                    totalBuyAmount += (amountInTHB + feeInTHB);
+                    totalFees += feeInTHB;
+
+                } else if (t.type === 'SELL') {
+                    // Subtract proceeds from buy amount (asset was sold)
+                    totalBuyAmount -= (amountInTHB - feeInTHB);
+                    totalFees += feeInTHB;
+
+                } else if (t.type === 'DIVIDEND') {
+                    // Track dividends separately
+                    totalDividends += amountInTHB;
+
+                } else if (t.type === 'TRANSFER') {
+                    // Track transfer fees only (amount already moved between accounts)
+                    totalFees += feeInTHB;
+                }
             }
         });
 
