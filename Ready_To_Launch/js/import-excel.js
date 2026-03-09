@@ -271,7 +271,16 @@ const ExcelImporter = {
             });
         }
 
-        const fxRate = parseFloat(row['FX Rate (THB per USD)']) || 1;
+        // For DEPOSIT transactions, the 'Price' column contains the FX rate
+        // For other transaction types, look for dedicated FX Rate column
+        let fxRate;
+        if (type === 'DEPOSIT') {
+            fxRate = parseFloat(row['Price']) || 1;
+            console.log(`Row ${rowIndex}: DEPOSIT using Price as FX Rate = ${fxRate}`);
+        } else {
+            fxRate = parseFloat(row['FX Rate (THB per USD)']) || parseFloat(row['Price']) || 1;
+        }
+
         console.log(`Row ${rowIndex}: Type=${type}, Unit=${unit}, Price=${price}, FX Rate=${fxRate}`);
 
         // For DEPOSIT: totalAmount is USD from Unit column (not Total Amount column)
