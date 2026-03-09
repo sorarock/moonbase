@@ -104,8 +104,9 @@ const TransactionManager = {
                     console.log(`✓ Weighted exchange rate: ${usdConsumption.weightedExchangeRate.toFixed(4)} THB/USD`);
                     
                     // When USD lots are consumed, also deduct from account balance to keep it in sync
+                    const currentBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
                     const success = StorageManager.updateAccount(transaction.accountId, {
-                        balance: account.balance - totalUSDNeeded
+                        balance: currentBalance - totalUSDNeeded
                     });
                     
                     if (!success) {
@@ -131,15 +132,17 @@ const TransactionManager = {
             }
 
             const totalCost = transaction.totalAmount + transaction.fee;
-            
-            // Check sufficient balance
-            if (account.balance < totalCost) {
-                throw new Error(`Insufficient balance in account. Required: ${Utils.formatCurrency(totalCost, account.currency)}, Available: ${Utils.formatCurrency(account.balance, account.currency)}`);
+
+            // Check sufficient balance using calculated balance from transactions
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
+            if (calculatedBalance < totalCost) {
+                throw new Error(`Insufficient balance in account. Required: ${Utils.formatCurrency(totalCost, account.currency)}, Available: ${Utils.formatCurrency(calculatedBalance, account.currency)}`);
             }
 
             // Update balance directly to avoid duplicate transaction records
+            // Use calculated balance to ensure accuracy
             const success = StorageManager.updateAccount(transaction.accountId, {
-                balance: account.balance - totalCost
+                balance: calculatedBalance - totalCost
             });
             
             if (!success) {
@@ -179,10 +182,12 @@ const TransactionManager = {
             }
             
             const proceeds = transaction.totalAmount - transaction.fee;
-            
+
             // Update balance directly to avoid duplicate transaction records
+            // Use calculated balance to ensure accuracy
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
             const success = StorageManager.updateAccount(transaction.accountId, {
-                balance: account.balance + proceeds
+                balance: calculatedBalance + proceeds
             });
             
             if (!success) {
@@ -217,8 +222,10 @@ const TransactionManager = {
             }
             
             // Update balance directly to avoid duplicate transaction records
+            // Use calculated balance to ensure accuracy
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
             const success = StorageManager.updateAccount(transaction.accountId, {
-                balance: account.balance + transaction.totalAmount
+                balance: calculatedBalance + transaction.totalAmount
             });
             
             if (!success) {
