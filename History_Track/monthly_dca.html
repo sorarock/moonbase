@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monthly DCA Entry</title>
+<style>
+  /* ── Design: Dark financial terminal aesthetic ── */
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:       #0a0e17;
+    --surface:  #111827;
+    --border:   #1e2d40;
+    --accent:   #00d4ff;
+    --accent2:  #7c3aed;
+    --green:    #10b981;
+    --yellow:   #f59e0b;
+    --red:      #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'IBM Plex Sans Thai', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 0 0 80px 0;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #0d1b2e 0%, #111827 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .header-logo { font-family: var(--mono); font-size: 13px; color: var(--accent);
+                 letter-spacing: 2px; font-weight: 600; }
+  .header-title { font-size: 15px; font-weight: 600; }
+  .header-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .sync-badge {
+    font-family: var(--mono); font-size: 11px; padding: 4px 10px;
+    border-radius: 20px; border: 1px solid var(--border);
+    background: #0a0e17; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sync-badge:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Month selector */
+  .month-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px; overflow-x: auto;
+  }
+  .month-label { font-family: var(--mono); font-size: 11px;
+                 color: var(--muted); white-space: nowrap; }
+  .month-nav { display: flex; gap: 8px; }
+  .month-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 6px;
+    font-family: var(--mono); font-size: 12px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .month-btn:hover, .month-btn.active {
+    background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600;
+  }
+  .month-current {
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    color: var(--accent); min-width: 120px; text-align: center;
+  }
+
+  /* Main */
+  .main { padding: 20px; max-width: 480px; margin: 0 auto; }
+
+  /* Summary card */
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .stat { text-align: center; }
+  .stat-value { font-family: var(--mono); font-size: 16px; font-weight: 600; }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.accent { color: var(--accent); }
+
+  /* Progress bar */
+  .progress-section { margin-bottom: 20px; }
+  .progress-header { display: flex; justify-content: space-between;
+                     font-size: 12px; margin-bottom: 6px; }
+  .progress-label { color: var(--muted); font-family: var(--mono); }
+  .progress-value { color: var(--accent); font-family: var(--mono); font-weight: 600; }
+  .progress-bar {
+    height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Section title */
+  .section-title {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* Asset rows */
+  .asset-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+  .asset-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    transition: border-color 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .asset-row::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+  .asset-row.high::before   { background: var(--red); }
+  .asset-row.medium::before { background: var(--yellow); }
+  .asset-row.low::before    { background: var(--green); }
+  .asset-row:focus-within   { border-color: var(--accent); }
+
+  .asset-info { }
+  .asset-name {
+    font-weight: 600; font-size: 14px; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .risk-badge {
+    font-family: var(--mono); font-size: 9px; padding: 2px 6px;
+    border-radius: 4px; font-weight: 600; text-transform: uppercase;
+  }
+  .risk-badge.high   { background: #2d1515; color: var(--red); }
+  .risk-badge.medium { background: #2d2415; color: var(--yellow); }
+  .risk-badge.low    { background: #152d1e; color: var(--green); }
+
+  .asset-target {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .asset-price {
+    font-family: var(--mono); font-size: 10px; color: var(--accent);
+    margin-top: 2px;
+  }
+  .asset-price.loading { color: var(--muted); animation: pulse 1.5s infinite; }
+  .price-change { margin-left: 6px; }
+  .price-change.up { color: var(--green); }
+  .price-change.down { color: var(--red); }
+
+  .asset-input-group { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+
+  .input-label { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+
+  .amount-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 10px;
+    width: 120px;
+    text-align: right;
+    transition: border-color 0.15s;
+  }
+  .amount-input:focus { outline: none; border-color: var(--accent); }
+  .amount-input:disabled { opacity: 0.4; }
+
+  .auto-fill-hint {
+    font-size: 10px; color: var(--muted); font-family: var(--mono);
+  }
+  .auto-fill-hint button {
+    background: none; border: none; color: var(--accent);
+    cursor: pointer; font-size: 10px; font-family: var(--mono);
+    padding: 0; text-decoration: underline;
+  }
+
+  /* Total bar */
+  .total-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .total-label { font-size: 13px; color: var(--muted); }
+  .total-value { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--accent); }
+  .total-target { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; text-align: right; }
+  .total-diff { font-family: var(--mono); font-size: 11px; margin-top: 2px; }
+  .total-diff.over { color: var(--red); }
+  .total-diff.under { color: var(--green); }
+
+  /* Notes */
+  .notes-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 12px 14px;
+    resize: none;
+    margin-bottom: 20px;
+    transition: border-color 0.15s;
+  }
+  .notes-input:focus { outline: none; border-color: var(--accent); }
+  .notes-input::placeholder { color: var(--muted); }
+
+  /* Submit */
+  .submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border: none; border-radius: 10px;
+    color: #000; font-weight: 700; font-size: 15px;
+    padding: 14px; cursor: pointer;
+    font-family: var(--sans);
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.3px;
+  }
+  .submit-btn:hover   { opacity: 0.9; }
+  .submit-btn:active  { transform: scale(0.98); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--surface); border: 1px solid var(--green);
+    color: var(--green); font-family: var(--mono); font-size: 13px;
+    padding: 10px 20px; border-radius: 8px;
+    opacity: 0; transition: opacity 0.3s;
+    z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Responsive */
+  @media(max-width:360px) {
+    .amount-input { width: 100px; font-size: 13px; }
+    .summary-card { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="header-logo">◈ DCA</div>
+    </div>
+    <div>
+      <div class="header-title">Monthly Entry</div>
+      <div class="header-sub" id="headerSub">MoonShot Portfolio</div>
+    </div>
+  </div>
+  <div id="syncBadge" class="sync-badge" onclick="handleSync()">⚫ Local</div>
+</div>
+
+<!-- Month bar -->
+<div class="month-bar">
+  <span class="month-label">PERIOD</span>
+  <div class="month-nav">
+    <button class="month-btn" onclick="changeMonth(-1)">‹</button>
+  </div>
+  <div class="month-current" id="monthDisplay"></div>
+  <div class="month-nav">
+    <button class="month-btn" onclick="changeMonth(1)">›</button>
+    <button class="month-btn active" onclick="goToCurrentMonth()">Now</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Summary -->
+  <div class="summary-card">
+    <div class="stat">
+      <div class="stat-value accent" id="statYear">Y1</div>
+      <div class="stat-label">YEAR</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value green" id="statDCATarget">5,000</div>
+      <div class="stat-label">DCA TARGET</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value yellow" id="statMonthCount">1</div>
+      <div class="stat-label">MONTH #</div>
+    </div>
+  </div>
+
+  <!-- Progress to 15M -->
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-label">▸ PROGRESS TO 15M GOAL</span>
+      <span class="progress-value" id="progressPct">0.0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Asset entries -->
+  <div class="section-title">Asset Allocation</div>
+  <div class="asset-list" id="assetList"></div>
+
+  <!-- Total -->
+  <div class="total-bar">
+    <div>
+      <div class="total-label">Total DCA this month</div>
+    </div>
+    <div style="text-align:right">
+      <div class="total-value" id="totalValue">฿0</div>
+      <div class="total-target" id="totalTarget">Target: ฿5,000</div>
+      <div class="total-diff" id="totalDiff"></div>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <textarea class="notes-input" id="notes" rows="2"
+    placeholder="Notes (optional) — e.g. BTC dip buy, market condition..."></textarea>
+
+  <!-- Submit -->
+  <button class="submit-btn" id="submitBtn" onclick="submitDCA()">
+    ✦ Record DCA Entry
+  </button>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const START_DATE  = new Date(2026, 2, 1); // March 2026 = Month 1
+const GOAL_THB    = 15_000_000;
+
+// DCA schedule
+function getDCATarget(year) {
+  if (year === 1) return 5000;
+  if (year === 2) return 10000;
+  if (year === 3) return 15000;
+  return 34500;
+}
+
+// Assets (sync กับ Port_Moon_Alien.xlsx ของคุณ)
+const ASSETS = [
+  { id:'btc',     name:'Bitcoin',        ticker:'BTC',           weight:0.10, risk:'high',   currency:'THB', platform:'Dime!' },
+  { id:'space',   name:'Space-UFO',      ticker:'SCBNEXT(A)',     weight:0.05, risk:'high',   currency:'THB', platform:'SCB' },
+  { id:'nasdaq',  name:'Nasdaq RMF',     ticker:'K-USXNDQRMF',   weight:0.20, risk:'medium', currency:'THB', platform:'KBank' },
+  { id:'defense', name:'Defense ITA',    ticker:'ITA',            weight:0.05, risk:'medium', currency:'USD', platform:'Dime!' },
+  { id:'world',   name:'หุ้นโลก RMF',   ticker:'SCBRMWORLD(A)', weight:0.40, risk:'medium', currency:'THB', platform:'SCB' },
+  { id:'gold',    name:'ทองคำ',         ticker:'GOLD',           weight:0.10, risk:'medium', currency:'THB', platform:'Dime!' },
+  { id:'fcd',     name:'USD Deposit',    ticker:'FCD',            weight:0.10, risk:'low',    currency:'USD', platform:'Dime! FCD' },
+];
+
+// ── State ──────────────────────────────────────────────────
+let currentDate = new Date();
+let prices      = {};
+let history     = JSON.parse(localStorage.getItem('dca_history') || '[]');
+let totalInvested = parseFloat(localStorage.getItem('total_invested') || '0');
+let portfolioValue = parseFloat(localStorage.getItem('portfolio_value') || '0');
+
+// ── Init ───────────────────────────────────────────────────
+window.onload = () => {
+  currentDate = new Date();
+  renderMonth();
+  renderAssets();
+  fetchPrices();
+  updateProgress();
+};
+
+// ── Month ──────────────────────────────────────────────────
+function changeMonth(delta) {
+  currentDate = new Date(currentDate.getFullYear(),
+                         currentDate.getMonth() + delta, 1);
+  renderMonth();
+  loadExistingEntry();
+}
+
+function goToCurrentMonth() {
+  currentDate = new Date();
+  renderMonth();
+  loadExistingEntry();
+}
+
+function renderMonth() {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                  'Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('monthDisplay').textContent =
+    `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+
+  // Calculate year and month number
+  const monthNum = (currentDate.getFullYear() - START_DATE.getFullYear()) * 12
+                 + (currentDate.getMonth() - START_DATE.getMonth()) + 1;
+  const year     = Math.ceil(monthNum / 12);
+  const target   = getDCATarget(Math.max(1, year));
+
+  document.getElementById('statYear').textContent     = `Y${Math.max(1,year)}`;
+  document.getElementById('statDCATarget').textContent = target.toLocaleString();
+  document.getElementById('statMonthCount').textContent = Math.max(1, monthNum);
+  document.getElementById('totalTarget').textContent   = `Target: ฿${target.toLocaleString()}`;
+
+  // Pre-fill amounts
+  ASSETS.forEach(a => {
+    const input = document.getElementById(`input_${a.id}`);
+    if (input) {
+      input.placeholder = Math.round(target * a.weight).toLocaleString();
+    }
+  });
+  updateTotal();
+}
+
+// ── Assets ─────────────────────────────────────────────────
+function renderAssets() {
+  const list = document.getElementById('assetList');
+  list.innerHTML = ASSETS.map(a => `
+    <div class="asset-row ${a.risk}" id="row_${a.id}">
+      <div class="asset-info">
+        <div class="asset-name">
+          ${a.name}
+          <span class="risk-badge ${a.risk}">${a.risk}</span>
+        </div>
+        <div class="asset-target">${(a.weight*100).toFixed(0)}% · ${a.platform}</div>
+        <div class="asset-price loading" id="price_${a.id}">loading price...</div>
+      </div>
+      <div class="asset-input-group">
+        <div class="input-label">THB AMOUNT</div>
+        <input
+          class="amount-input"
+          id="input_${a.id}"
+          type="number" min="0" step="100"
+          placeholder="0"
+          oninput="updateTotal()"
+        />
+        <div class="auto-fill-hint">
+          <button onclick="autoFill('${a.id}')">auto-fill</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function autoFill(assetId) {
+  const monthNum = (currentDate.getFullYear() - START_DATE.getFullYear()) * 12
+                 + (currentDate.getMonth() - START_DATE.getMonth()) + 1;
+  const year     = Math.max(1, Math.ceil(monthNum / 12));
+  const target   = getDCATarget(year);
+  const asset    = ASSETS.find(a => a.id === assetId);
+  if (!asset) return;
+  document.getElementById(`input_${assetId}`).value = Math.round(target * asset.weight);
+  updateTotal();
+}
+
+function autoFillAll() {
+  ASSETS.forEach(a => autoFill(a.id));
+}
+
+// ── Total ──────────────────────────────────────────────────
+function updateTotal() {
+  const monthNum = (currentDate.getFullYear() - START_DATE.getFullYear()) * 12
+                 + (currentDate.getMonth() - START_DATE.getMonth()) + 1;
+  const year     = Math.max(1, Math.ceil(monthNum / 12));
+  const target   = getDCATarget(year);
+  const total    = ASSETS.reduce((sum, a) => {
+    const v = parseFloat(document.getElementById(`input_${a.id}`)?.value || 0);
+    return sum + (isNaN(v) ? 0 : v);
+  }, 0);
+
+  document.getElementById('totalValue').textContent = `฿${total.toLocaleString()}`;
+  const diff    = total - target;
+  const diffEl  = document.getElementById('totalDiff');
+  if (Math.abs(diff) < 10) {
+    diffEl.textContent = '✓ On target';
+    diffEl.className   = 'total-diff';
+  } else if (diff > 0) {
+    diffEl.textContent = `+฿${diff.toLocaleString()} over`;
+    diffEl.className   = 'total-diff over';
+  } else {
+    diffEl.textContent = `฿${Math.abs(diff).toLocaleString()} remaining`;
+    diffEl.className   = 'total-diff under';
+  }
+}
+
+// ── Prices ─────────────────────────────────────────────────
+async function fetchPrices() {
+  // Simple mock — replace with real API calls from price_api.js
+  const mockPrices = {
+    btc:     { display: 'BTC ~฿3.5M', change: '+2.1%', up: true },
+    space:   { display: 'NAV loading...', change: '', up: true },
+    nasdaq:  { display: 'NAV loading...', change: '', up: true },
+    defense: { display: 'ITA $142', change: '-0.3%', up: false },
+    world:   { display: 'NAV loading...', change: '', up: true },
+    gold:    { display: 'XAU ~฿92,000/g', change: '+0.8%', up: true },
+    fcd:     { display: 'USD/THB ~31.2', change: '-0.2%', up: false },
+  };
+
+  ASSETS.forEach(a => {
+    const el = document.getElementById(`price_${a.id}`);
+    if (!el) return;
+    const p = mockPrices[a.id];
+    if (p) {
+      el.className = 'asset-price';
+      el.innerHTML = `${p.display} <span class="price-change ${p.up?'up':'down'}">${p.change}</span>`;
+    }
+  });
+}
+
+// ── Progress ───────────────────────────────────────────────
+function updateProgress() {
+  const pct = Math.min(100, (portfolioValue / GOAL_THB) * 100);
+  document.getElementById('progressPct').textContent  = pct.toFixed(1) + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ── Submit ─────────────────────────────────────────────────
+function submitDCA() {
+  const btn   = document.getElementById('submitBtn');
+  const total = ASSETS.reduce((s, a) => {
+    const v = parseFloat(document.getElementById(`input_${a.id}`)?.value || 0);
+    return s + (isNaN(v) ? 0 : v);
+  }, 0);
+
+  if (total <= 0) { showToast('Please enter at least one amount', true); return; }
+
+  const entry = {
+    id:       Date.now(),
+    date:     currentDate.toISOString().slice(0,7),
+    total,
+    assets:   ASSETS.map(a => ({
+      id:     a.id,
+      name:   a.name,
+      amount: parseFloat(document.getElementById(`input_${a.id}`)?.value || 0),
+    })),
+    notes:    document.getElementById('notes').value,
+    prices:   { ...prices },
+  };
+
+  // Save
+  const existing = history.findIndex(h => h.date === entry.date);
+  if (existing >= 0) history[existing] = entry; else history.push(entry);
+  localStorage.setItem('dca_history', JSON.stringify(history));
+
+  totalInvested += total;
+  localStorage.setItem('total_invested', totalInvested.toString());
+
+  btn.textContent = '✓ Saved!';
+  btn.disabled    = true;
+  showToast(`✓ DCA ฿${total.toLocaleString()} recorded for ${entry.date}`);
+
+  setTimeout(() => {
+    btn.textContent = '✦ Record DCA Entry';
+    btn.disabled    = false;
+  }, 2000);
+}
+
+function loadExistingEntry() {
+  const dateKey = currentDate.toISOString().slice(0,7);
+  const entry   = history.find(h => h.date === dateKey);
+  if (!entry) {
+    ASSETS.forEach(a => {
+      const el = document.getElementById(`input_${a.id}`);
+      if (el) el.value = '';
+    });
+    document.getElementById('notes').value = '';
+    updateTotal();
+    return;
+  }
+  entry.assets.forEach(a => {
+    const el = document.getElementById(`input_${a.id}`);
+    if (el) el.value = a.amount || '';
+  });
+  document.getElementById('notes').value = entry.notes || '';
+  updateTotal();
+}
+
+// ── Sync ───────────────────────────────────────────────────
+function handleSync() { showToast('Google Drive sync — connect in Settings'); }
+
+// ── Toast ──────────────────────────────────────────────────
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 3000);
+}
+</script>
+</body>
+</html>

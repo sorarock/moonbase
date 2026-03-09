@@ -154,7 +154,7 @@ const AccountManager = {
      * @param {string} date - Transaction date
      * @returns {boolean} Success status
      */
-    deposit(accountId, amount, description = 'Deposit', date = null) {
+    deposit(accountId, amount, description = 'Deposit', date = null, exchangeRate = 1) {
         const account = this.getAccount(accountId);
         if (!account) {
             throw new Error('Account not found');
@@ -164,11 +164,36 @@ const AccountManager = {
             throw new Error('Deposit amount must be greater than 0');
         }
 
+        // If USD account and no exchange rate provided, use current rate
+        if (account.currency === 'USD' && exchangeRate === 1) {
+            exchangeRate = window.getExchangeRate ? window.getExchangeRate() : 1;
+            console.log(`Using current exchange rate for DEPOSIT: ${exchangeRate.toFixed(4)}`);
+        }
+
         const newBalance = account.balance + amount;
         const success = this.updateAccount(accountId, { balance: newBalance });
 
         if (success) {
-            this.recordTransaction(accountId, 'DEPOSIT', amount, description, date);
+            this.recordTransaction(accountId, 'DEPOSIT', amount, description, date, exchangeRate);
+
+            // Create USD FIFO lot if USD account (to preserve exchange rate for future withdrawals)
+            if (account.currency === 'USD' && window.FIFOManager) {
+                try {
+                    FIFOManager.createCurrencyLot({
+                        portfolioId: account.portfolioId,
+                        currency: 'USD',
+                        quantity: amount,
+                        exchangeRate: exchangeRate,
+                        date: Utils.formatDate(date || new Date()),
+                        source: 'DEPOSIT',
+                        description: description || 'Manual deposit'
+                    });
+                    console.log(`✓ Created USD FIFO lot: ${amount} USD @ ${exchangeRate.toFixed(4)} THB/USD`);
+                } catch (error) {
+                    console.warn('Failed to create USD FIFO lot:', error.message);
+                }
+            }
+
             Utils.showNotification(`Deposited ${Utils.formatCurrency(amount, account.currency)} successfully`, 'success');
         }
 
@@ -197,11 +222,37 @@ const AccountManager = {
             throw new Error(`Insufficient balance. Available: ${Utils.formatCurrency(account.balance, account.currency)}`);
         }
 
+        let exchangeRate = 1;  // Default for THB
+        let usdLotsUsed = null;
+
+        // For USD accounts, consume USD FIFO lots to get historical exchange rate
+        if (account.currency === 'USD' && window.FIFOManager) {
+            try {
+                // Consume USD lots using FIFO method
+                const usdConsumption = FIFOManager.consumeUSDLots(
+                    account.portfolioId,
+                    'USD',
+                    amount
+                );
+
+                // Use weighted average exchange rate from consumed lots
+                exchangeRate = usdConsumption.weightedExchangeRate;
+                usdLotsUsed = usdConsumption.lotsUsed;
+
+                console.log(`✓ WITHDRAW consumed ${amount} USD from ${usdConsumption.lotsUsed.length} lot(s)`);
+                console.log(`✓ Historical weighted exchange rate: ${exchangeRate.toFixed(4)} THB/USD`);
+            } catch (error) {
+                console.warn('USD FIFO consumption failed:', error.message);
+                // Fallback to current exchange rate if FIFO fails
+                exchangeRate = window.getExchangeRate ? window.getExchangeRate() : 1;
+            }
+        }
+
         const newBalance = account.balance - amount;
         const success = this.updateAccount(accountId, { balance: newBalance });
 
         if (success) {
-            this.recordTransaction(accountId, 'WITHDRAW', amount, description, date);
+            this.recordTransaction(accountId, 'WITHDRAW', amount, description, date, exchangeRate, usdLotsUsed);
             Utils.showNotification(`Withdrawn ${Utils.formatCurrency(amount, account.currency)} successfully`, 'success');
         }
 
@@ -391,10 +442,12 @@ const AccountManager = {
      * @param {number} amount - Transaction amount
      * @param {string} description - Description
      * @param {string} date - Transaction date
+     * @param {number} exchangeRate - Exchange rate (default 1)
+     * @param {array} usdLotsUsed - USD FIFO lots consumed (optional)
      */
-    recordTransaction(accountId, type, amount, description, date) {
+    recordTransaction(accountId, type, amount, description, date, exchangeRate = 1, usdLotsUsed = null) {
         const account = this.getAccount(accountId);
-        if (!account) return;
+        if (!account) return false;
 
         const transaction = {
             id: Utils.generateId(),
@@ -415,10 +468,12 @@ const AccountManager = {
             quantity: 0,
             pricePerUnit: 0,
             fee: 0,
-            exchangeRate: 1
+            exchangeRate: exchangeRate,  // Use provided rate instead of hardcoded 1
+            usdLotsUsed: usdLotsUsed     // Track which lots were consumed
         };
 
         StorageManager.addTransaction(transaction);
+        return true;
     },
 
     /**

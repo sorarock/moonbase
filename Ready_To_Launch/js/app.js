@@ -3020,25 +3020,35 @@ function setupAccountFormHandlers() {
     if (operationForm) {
         operationForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            
+
             try {
                 const accountId = document.getElementById('operationAccountId').value;
                 const operationType = document.getElementById('operationType').value;
                 const amount = parseFloat(document.getElementById('operationAmount').value);
                 const date = document.getElementById('operationDate').value;
                 const description = document.getElementById('operationDescription').value;
-                
+
+                const account = AccountManager.getAccount(accountId);
+                let exchangeRate = 1;
+
+                // Get exchange rate from form if USD account
+                if (account && account.currency === 'USD') {
+                    const rateInput = document.getElementById('operationExchangeRate');
+                    exchangeRate = rateInput && rateInput.value ? parseFloat(rateInput.value) : 1;
+                }
+
                 if (operationType === 'DEPOSIT') {
-                    AccountManager.deposit(accountId, amount, description, date);
+                    AccountManager.deposit(accountId, amount, description, date, exchangeRate);
                 } else if (operationType === 'WITHDRAW') {
                     AccountManager.withdraw(accountId, amount, description, date);
+                    // Note: WITHDRAW gets exchange rate from FIFO, user input is for reference/override
                 } else if (operationType === 'INTEREST') {
                     AccountManager.recordInterestPayment(accountId, amount, date);
                 }
-                
+
                 closeAccountOperationModal();
                 App.loadAccounts();
-                
+
             } catch (error) {
                 console.error('Error processing operation:', error);
                 Utils.showNotification(error.message, 'error');
@@ -3139,7 +3149,7 @@ window.loadAccountAssetOptions = function() {
 window.showDepositModal = function(accountId) {
     const account = AccountManager.getAccount(accountId);
     if (!account) return;
-    
+
     document.getElementById('operationTitle').textContent = 'Deposit Money';
     document.getElementById('operationAccountId').value = accountId;
     document.getElementById('operationType').value = 'DEPOSIT';
@@ -3147,14 +3157,26 @@ window.showDepositModal = function(accountId) {
     document.getElementById('operationAmount').value = '';
     document.getElementById('operationDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('operationDescription').value = 'Deposit';
-    
+
+    // Show/hide exchange rate field for USD accounts
+    const exchangeRateGroup = document.getElementById('operationExchangeRateGroup');
+    if (account.currency === 'USD') {
+        exchangeRateGroup.style.display = 'block';
+        const currentRate = window.getExchangeRate ? window.getExchangeRate() : 1;
+        document.getElementById('operationExchangeRate').value = currentRate.toFixed(4);
+        document.getElementById('operationExchangeRate').required = true;
+    } else {
+        exchangeRateGroup.style.display = 'none';
+        document.getElementById('operationExchangeRate').required = false;
+    }
+
     Utils.toggleElement('#accountOperationModal', true);
 };
 
 window.showWithdrawModal = function(accountId) {
     const account = AccountManager.getAccount(accountId);
     if (!account) return;
-    
+
     document.getElementById('operationTitle').textContent = 'Withdraw Money';
     document.getElementById('operationAccountId').value = accountId;
     document.getElementById('operationType').value = 'WITHDRAW';
@@ -3162,7 +3184,33 @@ window.showWithdrawModal = function(accountId) {
     document.getElementById('operationAmount').value = '';
     document.getElementById('operationDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('operationDescription').value = 'Withdrawal';
-    
+
+    // Show/hide exchange rate field for USD accounts
+    const exchangeRateGroup = document.getElementById('operationExchangeRateGroup');
+    if (account.currency === 'USD' && window.FIFOManager) {
+        exchangeRateGroup.style.display = 'block';
+
+        // Auto-populate with FIFO weighted average rate
+        const lots = FIFOManager.getAllLots().filter(lot =>
+            lot.portfolioId === account.portfolioId &&
+            lot.currency === 'USD' &&
+            lot.remainingQuantity > 0
+        );
+
+        if (lots.length > 0) {
+            const totalQuantity = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+            const weightedRate = lots.reduce((sum, lot) =>
+                sum + (lot.exchangeRate * lot.remainingQuantity), 0) / totalQuantity;
+
+            document.getElementById('operationExchangeRate').value = weightedRate.toFixed(4);
+            console.log(`Auto-populated WITHDRAW exchange rate: ${weightedRate.toFixed(4)}`);
+        }
+        document.getElementById('operationExchangeRate').required = true;
+    } else {
+        exchangeRateGroup.style.display = 'none';
+        document.getElementById('operationExchangeRate').required = false;
+    }
+
     Utils.toggleElement('#accountOperationModal', true);
 };
 
@@ -3804,7 +3852,62 @@ window.updateTransactionFields = function() {
         accountGroup.style.display = 'block';
         document.getElementById('txnAccount').required = true;
         document.getElementById('txnTotal').readOnly = false;
-        
+
+        // Show exchange rate field for USD accounts
+        const accountSelect = document.getElementById('txnAccount');
+        const handleAccountChange = function() {
+            const selectedAccountId = accountSelect.value;
+            if (!selectedAccountId) return;
+
+            const selectedAccount = AccountManager.getAccount(selectedAccountId);
+
+            if (selectedAccount && selectedAccount.currency === 'USD') {
+                if (exchangeRateGroup) {
+                    exchangeRateGroup.style.display = 'block';
+                    document.getElementById('txnExchangeRate').required = true;
+
+                    // For WITHDRAW, auto-populate with FIFO rate
+                    if (txnType === 'WITHDRAW' && window.FIFOManager) {
+                        // Get weighted average rate from available USD lots
+                        const lots = FIFOManager.getAllLots().filter(lot =>
+                            lot.portfolioId === selectedAccount.portfolioId &&
+                            lot.currency === 'USD' &&
+                            lot.remainingQuantity > 0
+                        );
+
+                        if (lots.length > 0) {
+                            const totalQuantity = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+                            const weightedRate = lots.reduce((sum, lot) =>
+                                sum + (lot.exchangeRate * lot.remainingQuantity), 0) / totalQuantity;
+
+                            document.getElementById('txnExchangeRate').value = weightedRate.toFixed(4);
+                            console.log(`Auto-populated WITHDRAW exchange rate: ${weightedRate.toFixed(4)}`);
+                        }
+                    } else if (txnType === 'DEPOSIT') {
+                        // For DEPOSIT, use current global rate as default
+                        const currentRate = window.getExchangeRate ? window.getExchangeRate() : 1;
+                        document.getElementById('txnExchangeRate').value = currentRate.toFixed(4);
+                        console.log(`Auto-populated DEPOSIT exchange rate: ${currentRate.toFixed(4)}`);
+                    }
+                }
+            } else {
+                if (exchangeRateGroup) {
+                    exchangeRateGroup.style.display = 'none';
+                    document.getElementById('txnExchangeRate').required = false;
+                }
+            }
+        };
+
+        // Remove any existing listener to prevent duplicates
+        const oldAccountSelect = accountSelect.cloneNode(true);
+        accountSelect.parentNode.replaceChild(oldAccountSelect, accountSelect);
+        document.getElementById('txnAccount').addEventListener('change', handleAccountChange);
+
+        // Trigger on load if account already selected
+        if (accountSelect.value) {
+            handleAccountChange();
+        }
+
     } else if (txnType === 'TRANSFER') {
         console.log('Hiding asset field for TRANSFER');
         accountLabel.textContent = 'From Account *';

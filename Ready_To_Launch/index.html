@@ -1055,12 +1055,25 @@
 
                     <div class="form-group">
                         <label for="operationDescription" class="form-label">Description</label>
-                        <input 
-                            type="text" 
-                            id="operationDescription" 
+                        <input
+                            type="text"
+                            id="operationDescription"
                             class="input-field"
                             placeholder="Transaction description"
                         />
+                    </div>
+
+                    <div class="form-group" id="operationExchangeRateGroup" style="display: none;">
+                        <label for="operationExchangeRate" class="form-label">Exchange Rate (THB/USD) *</label>
+                        <input
+                            type="number"
+                            id="operationExchangeRate"
+                            class="input-field"
+                            placeholder="34.50"
+                            step="0.0001"
+                            min="0.0001"
+                        />
+                        <small class="form-help">Historical exchange rate for this USD transaction</small>
                     </div>
 
                     <div class="modal-actions">
@@ -1790,9 +1803,9 @@
     <script src="js/storage.js?v=20250308020"></script>
     <script src="js/auth.js?v=20250308006"></script>
     <script src="js/portfolio.js?v=20250308006"></script>
-    <script src="js/accounts.js?v=20260309003"></script>
-    <script src="js/fifo.js?v=20260309003"></script>
-    <script src="js/transactions.js?v=20260309003"></script>
+    <script src="js/accounts.js?v=20260309004"></script>
+    <script src="js/fifo.js?v=20260309004"></script>
+    <script src="js/transactions.js?v=20260309004"></script>
     <script src="js/prices.js?v=20250308006"></script>
     <script src="js/autorefresh.js?v=20250308006"></script>
     <script src="js/planning.js?v=20250308006"></script>
@@ -1800,6 +1813,6 @@
     <script src="js/reports.js?v=20250308006"></script>
     <script src="js/export.js?v=20250308006"></script>
     <script src="js/import-excel.js?v=20260309003"></script>
-    <script src="js/app.js?v=20260309003"></script>
+    <script src="js/app.js?v=20260309004"></script>
 </body>
 </html>
