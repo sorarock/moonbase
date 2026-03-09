@@ -1728,7 +1728,7 @@ const App = {
                     ${Utils.formatCurrency(stats.totalAssetValue, 'THB')}
                 </div>
                 <div style="font-size: 10px; color: var(--color-text-secondary); margin-top: 2px;">
-                    Assets: ${Utils.formatCurrency(stats.totalBuyAmount, 'THB')} | Cash: ${Utils.formatCurrency(stats.accountBalances, 'THB')}
+                    Assets: ${Utils.formatCurrency(stats.totalBuyAmount, 'THB')} | Cash: ${Utils.formatCurrency(stats.totalAssetValue - stats.totalBuyAmount, 'THB')}
                 </div>
             </div>
             <div class="card card-ultra-compact">
