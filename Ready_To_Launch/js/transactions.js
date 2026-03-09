@@ -627,8 +627,16 @@ const TransactionManager = {
             );
 
             lots.forEach(lot => {
-                // Use historical exchange rate from when lot was purchased
-                const costInTHB = lot.remainingQuantity * lot.pricePerUnit * lot.exchangeRate;
+                // For USD currency lots, use remainingQuantity * exchangeRate
+                // For asset lots (stocks/ETFs), use remainingQuantity * pricePerUnit * exchangeRate
+                let costInTHB;
+                if (lot.currency === 'USD' || lot.assetId === 'USD_CURRENCY') {
+                    // USD lots: Just multiply quantity by exchange rate
+                    costInTHB = lot.remainingQuantity * lot.exchangeRate;
+                } else {
+                    // Asset lots: quantity × price × exchange rate
+                    costInTHB = lot.remainingQuantity * lot.pricePerUnit * lot.exchangeRate;
+                }
                 totalCostBasisTHB += costInTHB;
             });
 
