@@ -351,7 +351,14 @@ const ExcelImporter = {
      */
     findMatchingDeposit(usdAmount, fxRate) {
         const tolerance = 0.5; // Allow $0.50 difference
-        const fxTolerance = 0.01; // Allow 0.01 THB/USD difference
+        const fxTolerance = 0.05; // Allow 0.05 THB/USD difference (increased from 0.01)
+
+        const deposits = this.parsedTransactions.filter(txn => txn.type === 'DEPOSIT');
+
+        console.log(`Looking for DEPOSIT matching ${usdAmount} USD @ ${fxRate} THB/USD`);
+        console.log(`Available DEPOSIT transactions:`, deposits.map(d =>
+            `${d.totalAmount} USD @ ${d.exchangeRate} THB/USD`
+        ));
 
         return this.parsedTransactions.find(txn =>
             txn.type === 'DEPOSIT' &&
