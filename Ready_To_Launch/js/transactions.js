@@ -614,32 +614,69 @@ const TransactionManager = {
             }
         });
 
-        // Calculate account balances for this portfolio
-        // Note: We use the current account balance, not recalculated from transactions
-        // because BUY/SELL/DIVIDEND/TRANSFER transactions already modified balances when recorded
-        let accountBalances = 0;
+        // ===================================================================
+        // Calculate Total Asset (Cost) using FIFO historical exchange rates
+        // ===================================================================
+
+        let totalCostBasisTHB = 0;
+
+        // Use FIFO lots for accurate historical cost basis (uses historical exchange rates)
+        if (window.FIFOManager) {
+            const lots = FIFOManager.getAllLots().filter(lot =>
+                lot.portfolioId === portfolioId && lot.remainingQuantity > 0
+            );
+
+            lots.forEach(lot => {
+                // Use historical exchange rate from when lot was purchased
+                const costInTHB = lot.remainingQuantity * lot.pricePerUnit * lot.exchangeRate;
+                totalCostBasisTHB += costInTHB;
+            });
+
+            console.log(`✓ Total cost basis from ${lots.length} FIFO lots: ฿${totalCostBasisTHB.toFixed(2)}`);
+        }
+
+        // Fallback: Calculate from BUY transactions if FIFO not available
+        if (totalCostBasisTHB === 0 && totalBuyAmount > 0) {
+            filteredTransactions.forEach(txn => {
+                if (txn.type === 'BUY') {
+                    const costInTHB = (txn.totalAmount + (txn.fee || 0)) * (txn.exchangeRate || 1);
+                    totalCostBasisTHB += costInTHB;
+                }
+            });
+            console.log('⚠️ Using transaction-based cost calculation (FIFO not available)');
+        }
+
+        // Add account balances using current exchange rate (for cash portion)
+        // Cash doesn't have a "cost basis" - it's always at current value
+        let accountBalancesTHB = 0;
         const accounts = AccountManager.getAccountsByPortfolio(portfolioId);
         accounts.forEach(acc => {
             // Use calculateBalanceAsOfDate from AccountManager which properly handles as-of-date logic
             const balanceAsOfDate = AccountManager.calculateBalanceAsOfDate(acc.id, asOfDate);
-            
+
             // Convert to THB for total calculation
             if (acc.currency === 'THB') {
-                accountBalances += balanceAsOfDate;
+                accountBalancesTHB += balanceAsOfDate;
             } else if (acc.currency === 'USD') {
-                // Use actual exchange rate from transfers, or fallback to current exchange rate
-                const rate = exchangeRates.USD_TO_THB || getExchangeRate();
-                accountBalances += balanceAsOfDate * rate;
+                // Use current exchange rate for cash balances
+                const rate = getExchangeRate();
+                accountBalancesTHB += balanceAsOfDate * rate;
             } else {
                 // For other currencies, add as-is (will be enhanced later)
-                accountBalances += balanceAsOfDate;
+                accountBalancesTHB += balanceAsOfDate;
             }
         });
 
-        // Total Asset = Buy amounts + Current account balances (OLD - cost basis)
-        const totalAssetValue = totalBuyAmount + accountBalances;
-        
-        // Total Gain/Loss = Total Asset - Total Deposit (OLD)
+        console.log(`=== Total Asset (Cost) Calculation ===`);
+        console.log(`Cost basis from FIFO/transactions: ฿${totalCostBasisTHB.toFixed(2)}`);
+        console.log(`Account balances: ฿${accountBalancesTHB.toFixed(2)}`);
+
+        // Total Asset (Cost) = FIFO cost basis + current cash value
+        const totalAssetValue = totalCostBasisTHB + accountBalancesTHB;
+
+        console.log(`Total Asset (Cost): ฿${totalAssetValue.toFixed(2)}`);
+
+        // Total Gain/Loss = Total Asset - Total Deposit
         const totalGainLoss = totalAssetValue - totalDeposits;
 
         // NEW: Calculate Total Asset Value as of using manual prices from portfolio
@@ -718,18 +755,23 @@ const TransactionManager = {
                 }
             });
         }
-        
+
+        console.log(`=== Total Asset Value as of ===`);
+        console.log(`Current exchange rate: ${globalExchangeRate.toFixed(4)}`);
+        console.log(`Total Asset Value as of: ฿${totalAssetValueAsOf.toFixed(2)}`);
+        console.log(`Unrealized Gain/Loss: ฿${(totalAssetValueAsOf - totalAssetValue).toFixed(2)}`);
+
         // NEW: Total Gain/Loss using manual prices
         const totalGainLossAsOf = totalAssetValueAsOf - totalDeposits;
 
         return {
             totalDeposits,
-            totalAssetValue,           // OLD: Cost basis calculation
-            totalAssetValueAsOf,       // NEW: Using manual prices + global exchange rate
+            totalAssetValue,           // Cost basis using FIFO historical exchange rates
+            totalAssetValueAsOf,       // Current value using current prices + current exchange rate
             totalFees,
-            totalGainLoss,             // OLD: Based on cost basis
-            totalGainLossAsOf,         // NEW: Based on manual prices
-            accountBalances,
+            totalGainLoss,             // Based on cost basis
+            totalGainLossAsOf,         // Based on current value
+            accountBalances: accountBalancesTHB,  // Cash balances in THB
             totalBuyAmount,
             totalDividends,
             transactionCount: filteredTransactions.length
