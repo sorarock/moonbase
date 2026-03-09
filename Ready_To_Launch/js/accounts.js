@@ -174,20 +174,33 @@ const AccountManager = {
         const success = this.updateAccount(accountId, { balance: newBalance });
 
         if (success) {
-            this.recordTransaction(accountId, 'DEPOSIT', amount, description, date, exchangeRate);
+            const txn = this.recordTransaction(accountId, 'DEPOSIT', amount, description, date, exchangeRate);
 
             // Create USD FIFO lot if USD account (to preserve exchange rate for future withdrawals)
             if (account.currency === 'USD' && window.FIFOManager) {
                 try {
-                    FIFOManager.createCurrencyLot({
+                    // Create lot manually (since createCurrencyLot only works with TRANSFER type)
+                    const lots = FIFOManager.getAllLots() || [];
+                    const lot = {
+                        id: Utils.generateId(),
                         portfolioId: account.portfolioId,
-                        currency: 'USD',
+                        assetId: 'USD_CURRENCY',
+                        accountId: accountId,
+                        transactionId: txn?.id || null,
+                        purchaseDate: Utils.formatDate(date || new Date()),
                         quantity: amount,
+                        remainingQuantity: amount,
+                        pricePerUnit: exchangeRate,
+                        currency: 'USD',
                         exchangeRate: exchangeRate,
-                        date: Utils.formatDate(date || new Date()),
+                        costBasisTHB: amount * exchangeRate,
+                        status: 'OPEN',
+                        createdAt: new Date().toISOString(),
                         source: 'DEPOSIT',
                         description: description || 'Manual deposit'
-                    });
+                    };
+                    lots.push(lot);
+                    FIFOManager.saveLots(lots);
                     console.log(`✓ Created USD FIFO lot: ${amount} USD @ ${exchangeRate.toFixed(4)} THB/USD`);
                 } catch (error) {
                     console.warn('Failed to create USD FIFO lot:', error.message);
