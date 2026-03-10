@@ -3858,7 +3858,10 @@ window.updateTransactionFields = function() {
         // Show exchange rate field for USD accounts
         const accountSelect = document.getElementById('txnAccount');
         const handleAccountChange = function() {
+            console.log('handleAccountChange triggered for', txnType);
             const selectedAccountId = accountSelect.value;
+            console.log('Selected account ID:', selectedAccountId);
+
             if (!selectedAccountId) {
                 // Hide exchange rate if no account selected
                 if (exchangeRateGroup) {
@@ -3869,8 +3872,10 @@ window.updateTransactionFields = function() {
             }
 
             const selectedAccount = AccountManager.getAccount(selectedAccountId);
+            console.log('Selected account currency:', selectedAccount?.currency);
 
             if (selectedAccount && selectedAccount.currency === 'USD') {
+                console.log('USD account detected, showing exchange rate field');
                 if (exchangeRateGroup) {
                     exchangeRateGroup.style.display = 'block';
                     document.getElementById('txnExchangeRate').required = true;
@@ -3915,6 +3920,7 @@ window.updateTransactionFields = function() {
                     }
                 }
             } else {
+                console.log('Non-USD account or no account, hiding exchange rate field');
                 if (exchangeRateGroup) {
                     exchangeRateGroup.style.display = 'none';
                     document.getElementById('txnExchangeRate').required = false;
