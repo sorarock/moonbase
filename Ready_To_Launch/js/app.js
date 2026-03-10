@@ -3683,15 +3683,20 @@ window.updateTransactionAssets = function() {
     const txnType = document.getElementById('txnType').value;
     const assetSelect = document.getElementById('txnAsset');
     const accountSelect = document.getElementById('txnAccount');
-    
+
+    console.log('updateTransactionAssets called with portfolioId:', portfolioId);
+
     if (!portfolioId) {
+        console.log('No portfolio selected, clearing dropdowns');
         assetSelect.innerHTML = '<option value="">Select Portfolio First</option>';
         accountSelect.innerHTML = '<option value="">Select Portfolio First</option>';
         return;
     }
-    
+
     // Load assets from portfolio
     const portfolio = PortfolioManager.getPortfolio(portfolioId);
+    console.log('Portfolio found:', portfolio?.name, 'Assets count:', portfolio?.assets?.length);
+
     if (portfolio && portfolio.assets) {
         let assetsToShow = portfolio.assets;
         
