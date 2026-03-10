@@ -3931,10 +3931,15 @@ window.updateTransactionFields = function() {
         // Remove any existing listener to prevent duplicates
         const oldAccountSelect = accountSelect.cloneNode(true);
         accountSelect.parentNode.replaceChild(oldAccountSelect, accountSelect);
-        document.getElementById('txnAccount').addEventListener('change', handleAccountChange);
+
+        // Get the new element reference after replacement
+        const newAccountSelect = document.getElementById('txnAccount');
+        newAccountSelect.addEventListener('change', handleAccountChange);
+        console.log('Account change listener added for DEPOSIT/WITHDRAW/INTEREST');
 
         // Trigger on load if account already selected
-        if (accountSelect.value) {
+        if (newAccountSelect.value) {
+            console.log('Account already selected on load, triggering handler');
             handleAccountChange();
         }
 
