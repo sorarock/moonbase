@@ -3928,6 +3928,9 @@ window.updateTransactionFields = function() {
             }
         };
 
+        // Store handler globally so inline onchange can call it
+        window.handleAccountChangeForDeposit = handleAccountChange;
+
         // Remove any existing listener to prevent duplicates
         const oldAccountSelect = accountSelect.cloneNode(true);
         accountSelect.parentNode.replaceChild(oldAccountSelect, accountSelect);
