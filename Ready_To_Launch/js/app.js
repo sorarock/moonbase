@@ -3859,8 +3859,11 @@ window.updateTransactionFields = function() {
         const accountSelect = document.getElementById('txnAccount');
         const handleAccountChange = function() {
             console.log('handleAccountChange triggered for', txnType);
-            const selectedAccountId = accountSelect.value;
+
+            // Use the direct element reference to get the value
+            const selectedAccountId = document.getElementById('txnAccount').value;
             console.log('Selected account ID:', selectedAccountId);
+            console.log('Account select element:', accountSelect);
 
             if (!selectedAccountId) {
                 // Hide exchange rate if no account selected
@@ -3872,6 +3875,7 @@ window.updateTransactionFields = function() {
             }
 
             const selectedAccount = AccountManager.getAccount(selectedAccountId);
+            console.log('Selected account:', selectedAccount);
             console.log('Selected account currency:', selectedAccount?.currency);
 
             if (selectedAccount && selectedAccount.currency === 'USD') {
