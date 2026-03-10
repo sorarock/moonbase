@@ -3460,16 +3460,28 @@ window.showEditTransactionModal = function(transactionId) {
             // Set portfolio value
             portfolioSelect.value = transaction.portfolioId;
             console.log('Set portfolio to:', transaction.portfolioId);
-            
+            console.log('Portfolio dropdown value:', portfolioSelect.value);
+
             // Load assets and accounts for this portfolio
             updateTransactionAssets();
-            
-            // Wait for updateTransactionAssets to finish, then set account value
+            console.log('Called updateTransactionAssets()');
+
+            // Wait for updateTransactionAssets to finish, then set asset and account values
             setTimeout(() => {
+                if (transaction.assetId) {
+                    const assetSelect = document.getElementById('txnAsset');
+                    assetSelect.value = transaction.assetId;
+                    console.log('Set asset to:', transaction.assetId);
+                    console.log('Asset dropdown value:', assetSelect.value);
+                    console.log('Asset dropdown options:', assetSelect.innerHTML.substring(0, 200));
+                }
+
                 if (transaction.accountId) {
                     const accountSelect = document.getElementById('txnAccount');
                     accountSelect.value = transaction.accountId;
                     console.log('Set account to:', transaction.accountId);
+                    console.log('Account dropdown value:', accountSelect.value);
+                    console.log('Account dropdown options:', accountSelect.innerHTML.substring(0, 200));
                 }
             }, 400);
         }, 100);
