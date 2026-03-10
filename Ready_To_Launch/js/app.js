@@ -927,6 +927,7 @@ const App = {
             Utils.toggleElement('#dashboardTransactions', false);
             Utils.toggleElement('#dashboardFilter', false);
             Utils.toggleElement('#exchangeRateSettings', false);
+            Utils.toggleElement('#fifoManagement', false);
             console.log('No data yet - showing empty state');
         } else {
             // Hide empty state
@@ -935,6 +936,7 @@ const App = {
             Utils.toggleElement('#dashboardCharts', true);
             Utils.toggleElement('#dashboardPortfolios', true);
             Utils.toggleElement('#dashboardTransactions', true);
+            Utils.toggleElement('#fifoManagement', true);
             
             // Render portfolio filter
             this.renderPortfolioFilter(portfolios);
@@ -4693,27 +4695,66 @@ function checkForUSDAssets() {
 window.updateExchangeRate = function() {
     const input = document.getElementById('exchangeRateInput');
     const rate = parseFloat(input.value);
-    
+
     if (!rate || rate <= 0) {
         Utils.showNotification('Please enter a valid exchange rate', 'error');
         return;
     }
-    
+
     const rateData = {
         rate: rate,
         lastUpdated: new Date().toISOString(),
         source: 'manual',
         fcdAccountId: null
     };
-    
+
     StorageManager.saveExchangeRate(rateData);
     loadExchangeRateSettings();
-    
+
     // Reload dashboard to apply new rate
     App.loadDashboard();
-    
+
     Utils.showNotification(`Exchange rate updated to ${rate.toFixed(2)} THB/USD`, 'success');
 };
+
+/**
+ * Clear all FIFO lots and sales data
+ */
+window.clearFIFOLots = function() {
+    if (!confirm('⚠️ Are you sure you want to clear ALL FIFO lot data?\n\nThis will:\n• Delete all FIFO lots\n• Delete all FIFO sale records\n• Recalculate cost basis from transactions\n\nThis action cannot be undone!')) {
+        return;
+    }
+
+    try {
+        // Clear from localStorage
+        localStorage.removeItem('PM_FIFO_LOTS');
+        localStorage.removeItem('PM_FIFO_SALES');
+
+        // Clear from StorageManager
+        StorageManager.saveToLocal(StorageManager.KEYS.FIFO_LOTS, []);
+        StorageManager.saveToLocal(StorageManager.KEYS.FIFO_SALES, []);
+
+        // Clear from cloud storage if enabled
+        if (StorageManager.isCloudEnabled) {
+            StorageManager.syncToCloud().catch(err => {
+                console.warn('Failed to sync FIFO clear to cloud:', err);
+            });
+        }
+
+        console.log('✓ All FIFO lots cleared');
+        Utils.showNotification('FIFO lots cleared successfully. Refreshing dashboard...', 'success');
+
+        // Reload dashboard to recalculate
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+
+    } catch (error) {
+        console.error('Error clearing FIFO lots:', error);
+        Utils.showNotification('Failed to clear FIFO lots: ' + error.message, 'error');
+    }
+};
+
 
 /**
  * Auto-calculate exchange rate from FCD account
