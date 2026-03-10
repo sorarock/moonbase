@@ -3857,7 +3857,14 @@ window.updateTransactionFields = function() {
         const accountSelect = document.getElementById('txnAccount');
         const handleAccountChange = function() {
             const selectedAccountId = accountSelect.value;
-            if (!selectedAccountId) return;
+            if (!selectedAccountId) {
+                // Hide exchange rate if no account selected
+                if (exchangeRateGroup) {
+                    exchangeRateGroup.style.display = 'none';
+                    document.getElementById('txnExchangeRate').required = false;
+                }
+                return;
+            }
 
             const selectedAccount = AccountManager.getAccount(selectedAccountId);
 
@@ -3865,6 +3872,13 @@ window.updateTransactionFields = function() {
                 if (exchangeRateGroup) {
                     exchangeRateGroup.style.display = 'block';
                     document.getElementById('txnExchangeRate').required = true;
+
+                    // Update label to show USD = ? THB
+                    const rateLabel = document.getElementById('txnExchangeRateLabel');
+                    if (rateLabel) rateLabel.textContent = 'USD';
+
+                    const rateHelp = document.getElementById('txnExchangeRateHelp');
+                    if (rateHelp) rateHelp.textContent = 'How many THB = 1 USD';
 
                     // For WITHDRAW, auto-populate with FIFO rate
                     if (txnType === 'WITHDRAW' && window.FIFOManager) {
@@ -3882,12 +3896,20 @@ window.updateTransactionFields = function() {
 
                             document.getElementById('txnExchangeRate').value = weightedRate.toFixed(4);
                             console.log(`Auto-populated WITHDRAW exchange rate: ${weightedRate.toFixed(4)}`);
+                        } else {
+                            // No lots available, use global rate
+                            const currentRate = window.getExchangeRate ? window.getExchangeRate() : 35;
+                            document.getElementById('txnExchangeRate').value = currentRate.toFixed(4);
                         }
                     } else if (txnType === 'DEPOSIT') {
-                        // For DEPOSIT, use current global rate as default
-                        const currentRate = window.getExchangeRate ? window.getExchangeRate() : 1;
+                        // For DEPOSIT, use current global rate as default (user can edit)
+                        const currentRate = window.getExchangeRate ? window.getExchangeRate() : 35;
                         document.getElementById('txnExchangeRate').value = currentRate.toFixed(4);
-                        console.log(`Auto-populated DEPOSIT exchange rate: ${currentRate.toFixed(4)}`);
+                        console.log(`Auto-populated DEPOSIT exchange rate: ${currentRate.toFixed(4)} (you can edit this)`);
+                    } else if (txnType === 'INTEREST') {
+                        // For INTEREST, use current global rate as default
+                        const currentRate = window.getExchangeRate ? window.getExchangeRate() : 35;
+                        document.getElementById('txnExchangeRate').value = currentRate.toFixed(4);
                     }
                 }
             } else {
@@ -4106,13 +4128,29 @@ function setupTransactionFormHandler() {
             if (txnType === 'TRANSFER') {
                 transactionData.accountId = getElementValue('txnAccount');
                 transactionData.destinationAccountId = getElementValue('txnDestinationAccount');
-                
+
                 // Safely get exchange rate with fallback to 1
                 const exchangeRateEl = document.getElementById('txnExchangeRate');
                 transactionData.exchangeRate = exchangeRateEl ? (parseFloat(exchangeRateEl.value) || 1) : 1;
-                
+
                 if (!transactionData.accountId || !transactionData.destinationAccountId) {
                     throw new Error('Please select both source and destination accounts');
+                }
+            } else if (txnType === 'DEPOSIT' || txnType === 'WITHDRAW' || txnType === 'INTEREST') {
+                // DEPOSIT/WITHDRAW/INTEREST transactions
+                transactionData.accountId = getElementValue('txnAccount') || null;
+
+                // Capture exchange rate if provided (for USD accounts)
+                const exchangeRateEl = document.getElementById('txnExchangeRate');
+                if (exchangeRateEl && exchangeRateEl.value) {
+                    transactionData.exchangeRate = parseFloat(exchangeRateEl.value) || 1;
+                } else {
+                    // Default to 1 for THB accounts or if not provided
+                    transactionData.exchangeRate = 1;
+                }
+
+                if (!transactionData.accountId) {
+                    throw new Error('Please select an account');
                 }
             } else {
                 // BUY/SELL/DIVIDEND transactions
@@ -4120,9 +4158,9 @@ function setupTransactionFormHandler() {
                 if (!assetSelect) {
                     throw new Error('Asset field not found');
                 }
-                
+
                 const selectedAsset = assetSelect.options[assetSelect.selectedIndex];
-                
+
                 transactionData.assetId = assetSelect.value || null;
                 transactionData.assetName = selectedAsset?.getAttribute('data-name') || '';
                 transactionData.assetTicker = selectedAsset?.getAttribute('data-ticker') || '';

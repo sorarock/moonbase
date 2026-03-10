@@ -344,8 +344,20 @@ const FIFOManager = {
      * @returns {object} Created USD lot
      */
     createCurrencyLot(transaction) {
-        if (transaction.type !== 'TRANSFER') {
-            throw new Error('Can only create currency lots from TRANSFER transactions');
+        if (transaction.type !== 'TRANSFER' && transaction.type !== 'DEPOSIT') {
+            throw new Error('Can only create currency lots from TRANSFER or DEPOSIT transactions');
+        }
+
+        let quantity, accountId, costBasisTHB;
+
+        if (transaction.type === 'TRANSFER') {
+            quantity = transaction.destinationAmount;
+            accountId = transaction.destinationAccountId;
+            costBasisTHB = transaction.totalAmount;
+        } else if (transaction.type === 'DEPOSIT') {
+            quantity = transaction.totalAmount;
+            accountId = transaction.accountId;
+            costBasisTHB = transaction.totalAmount * transaction.exchangeRate;
         }
 
         const lot = {
@@ -354,14 +366,14 @@ const FIFOManager = {
             assetId: 'USD_CURRENCY',
             transactionId: transaction.id,
             purchaseDate: transaction.date,
-            quantity: transaction.destinationAmount,
-            remainingQuantity: transaction.destinationAmount,
+            quantity: quantity,
+            remainingQuantity: quantity,
             pricePerUnit: transaction.exchangeRate,
             currency: 'USD',
             exchangeRate: transaction.exchangeRate,
-            costBasisTHB: transaction.totalAmount,
+            costBasisTHB: costBasisTHB,
             status: 'OPEN',
-            accountId: transaction.destinationAccountId,
+            accountId: accountId,
             createdAt: new Date().toISOString()
         };
 

@@ -66,11 +66,15 @@ const TransactionManager = {
             this.processSellTransaction(transaction);
         } else if (transaction.type === 'DIVIDEND') {
             this.processDividendTransaction(transaction);
+        } else if (transaction.type === 'DEPOSIT') {
+            this.processDepositTransaction(transaction);
+        } else if (transaction.type === 'WITHDRAW') {
+            this.processWithdrawTransaction(transaction);
         }
 
         // Save transaction
         StorageManager.addTransaction(transaction);
-        
+
         Utils.showNotification(`Transaction recorded successfully!`, 'success');
         return transaction;
     },
@@ -220,16 +224,94 @@ const TransactionManager = {
             if (!account) {
                 throw new Error('Account not found');
             }
-            
+
             // Update balance directly to avoid duplicate transaction records
             // Use calculated balance to ensure accuracy
             const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
             const success = StorageManager.updateAccount(transaction.accountId, {
                 balance: calculatedBalance + transaction.totalAmount
             });
-            
+
             if (!success) {
                 throw new Error('Failed to update account balance');
+            }
+        }
+    },
+
+    /**
+     * Process DEPOSIT transaction
+     * @param {object} transaction - Transaction object
+     */
+    processDepositTransaction(transaction) {
+        // Add deposit to account if specified
+        if (transaction.accountId) {
+            const account = AccountManager.getAccount(transaction.accountId);
+            if (!account) {
+                throw new Error('Account not found');
+            }
+
+            // Update balance directly to avoid duplicate transaction records
+            // Use calculated balance to ensure accuracy
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
+            const success = StorageManager.updateAccount(transaction.accountId, {
+                balance: calculatedBalance + transaction.totalAmount
+            });
+
+            if (!success) {
+                throw new Error('Failed to update account balance');
+            }
+
+            // Create USD currency lot for FIFO tracking if depositing into USD account
+            if (account.currency === 'USD' && window.FIFOManager) {
+                try {
+                    const usdLot = FIFOManager.createCurrencyLot(transaction);
+                    console.log(`✓ USD lot created from DEPOSIT: ${usdLot.quantity} USD @ ${usdLot.pricePerUnit} THB/USD (Cost: ${usdLot.costBasisTHB} THB)`);
+                } catch (error) {
+                    console.warn('USD lot creation from DEPOSIT failed:', error.message);
+                }
+            }
+        }
+    },
+
+    /**
+     * Process WITHDRAW transaction
+     * @param {object} transaction - Transaction object
+     */
+    processWithdrawTransaction(transaction) {
+        // Deduct from account if specified
+        if (transaction.accountId) {
+            const account = AccountManager.getAccount(transaction.accountId);
+            if (!account) {
+                throw new Error('Account not found');
+            }
+
+            // Check sufficient balance
+            const calculatedBalance = AccountManager.calculateBalanceAsOfDate(account.id, new Date());
+            if (calculatedBalance < transaction.totalAmount) {
+                throw new Error(`Insufficient balance. Required: ${Utils.formatCurrency(transaction.totalAmount, account.currency)}, Available: ${Utils.formatCurrency(calculatedBalance, account.currency)}`);
+            }
+
+            // Update balance directly
+            const success = StorageManager.updateAccount(transaction.accountId, {
+                balance: calculatedBalance - transaction.totalAmount
+            });
+
+            if (!success) {
+                throw new Error('Failed to update account balance');
+            }
+
+            // Consume USD lots for FIFO tracking if withdrawing from USD account
+            if (account.currency === 'USD' && window.FIFOManager) {
+                try {
+                    const usdConsumption = FIFOManager.consumeUSDLots(
+                        transaction.portfolioId,
+                        transaction.accountId,
+                        transaction.totalAmount
+                    );
+                    console.log(`✓ Consumed ${transaction.totalAmount} USD from ${usdConsumption.lotsUsed.length} lot(s) for WITHDRAW`);
+                } catch (error) {
+                    console.warn('USD FIFO consumption for WITHDRAW failed:', error.message);
+                }
             }
         }
     },
