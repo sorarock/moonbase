@@ -440,6 +440,14 @@ const GoogleDriveManager = {
                 }
             }
 
+            // Add metadata for version tracking
+            const settings = StorageManager.getSettings();
+            dataToSync._metadata = {
+                dataVersion: settings.dataVersion || '2.0',
+                syncDate: new Date().toISOString(),
+                migrationCompleted: settings.migrationCompleted || false
+            };
+
             // Upload each data type
             let uploadedCount = 0;
             for (const [key, data] of Object.entries(dataToSync)) {
@@ -500,6 +508,19 @@ const GoogleDriveManager = {
                         StorageManager.saveToLocal(key, data);
                         filesLoaded++;
                     }
+                }
+            }
+
+            // Check for migration needs after loading
+            if (filesLoaded > 0) {
+                const loadedSettings = StorageManager.getSettings();
+                const loadedTransactions = StorageManager.getTransactions();
+
+                // If we loaded old format data (transactions but no accountTransactions/assetTransactions)
+                if (loadedTransactions.length > 0 &&
+                    (!loadedSettings.migrationCompleted || !loadedSettings.dataVersion)) {
+                    console.log('⚠️ Loaded legacy transaction format from cloud, migration will run on next init');
+                    // Migration will trigger automatically on next app init via checkAndMigrate()
                 }
             }
 

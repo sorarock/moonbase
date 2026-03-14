@@ -8,7 +8,9 @@ const StorageManager = {
     KEYS: {
         PORTFOLIOS: 'portfolios',
         ACCOUNTS: 'accounts',
-        TRANSACTIONS: 'transactions',
+        TRANSACTIONS: 'transactions',  // Legacy key, kept for backward compatibility
+        ACCOUNT_TRANSACTIONS: 'accountTransactions',  // New: DEPOSIT, WITHDRAW, TRANSFER, INTEREST
+        ASSET_TRANSACTIONS: 'assetTransactions',      // New: BUY, SELL, DIVIDEND
         DEPOSITS: 'deposits',
         PRICES: 'assetPrices',
         PLANS: 'investmentPlans',
@@ -53,7 +55,9 @@ const StorageManager = {
         const defaults = {
             [this.KEYS.PORTFOLIOS]: [],
             [this.KEYS.ACCOUNTS]: [],
-            [this.KEYS.TRANSACTIONS]: [],
+            [this.KEYS.TRANSACTIONS]: [],  // Legacy, kept for migration
+            [this.KEYS.ACCOUNT_TRANSACTIONS]: [],  // New split array
+            [this.KEYS.ASSET_TRANSACTIONS]: [],    // New split array
             [this.KEYS.DEPOSITS]: [],
             [this.KEYS.PRICES]: {},
             [this.KEYS.PLANS]: [],
@@ -65,7 +69,9 @@ const StorageManager = {
                 currency: 'THB',
                 theme: 'light',
                 autoSync: false,
-                lastSync: null
+                lastSync: null,
+                dataVersion: '2.0',           // Track data structure version
+                migrationCompleted: false     // Track if v2.0 migration completed
             }
         };
 
@@ -74,6 +80,9 @@ const StorageManager = {
                 localStorage.setItem(key, JSON.stringify(defaultValue));
             }
         }
+
+        // Check if migration is needed (existing data without v2.0 structure)
+        this.checkAndMigrate();
     },
 
     // ========================================================================
@@ -249,7 +258,7 @@ const StorageManager = {
         return this.saveAccounts(filtered);
     },
 
-    // Transactions
+    // Transactions (Legacy - kept for backward compatibility)
     getTransactions() {
         return this.loadFromLocal(this.KEYS.TRANSACTIONS) || [];
     },
@@ -264,6 +273,40 @@ const StorageManager = {
         transaction.date = transaction.date || new Date().toISOString();
         transactions.push(transaction);
         return this.saveTransactions(transactions);
+    },
+
+    // Account Transactions (New split storage)
+    getAccountTransactions() {
+        return this.loadFromLocal(this.KEYS.ACCOUNT_TRANSACTIONS) || [];
+    },
+
+    saveAccountTransactions(transactions) {
+        return this.saveToLocal(this.KEYS.ACCOUNT_TRANSACTIONS, transactions);
+    },
+
+    addAccountTransaction(transaction) {
+        const transactions = this.getAccountTransactions();
+        transaction.id = transaction.id || Utils.generateId();
+        transaction.date = transaction.date || new Date().toISOString();
+        transactions.push(transaction);
+        return this.saveAccountTransactions(transactions);
+    },
+
+    // Asset Transactions (New split storage)
+    getAssetTransactions() {
+        return this.loadFromLocal(this.KEYS.ASSET_TRANSACTIONS) || [];
+    },
+
+    saveAssetTransactions(transactions) {
+        return this.saveToLocal(this.KEYS.ASSET_TRANSACTIONS, transactions);
+    },
+
+    addAssetTransaction(transaction) {
+        const transactions = this.getAssetTransactions();
+        transaction.id = transaction.id || Utils.generateId();
+        transaction.date = transaction.date || new Date().toISOString();
+        transactions.push(transaction);
+        return this.saveAssetTransactions(transactions);
     },
 
     // Settings
@@ -363,7 +406,7 @@ const StorageManager = {
     getStorageStats() {
         const usage = Utils.getStorageUsage();
         const dataBreakdown = {};
-        
+
         for (const key of Object.values(this.KEYS)) {
             const data = localStorage.getItem(key);
             if (data) {
@@ -378,6 +421,187 @@ const StorageManager = {
             ...usage,
             breakdown: dataBreakdown
         };
+    },
+
+    // ========================================================================
+    // MIGRATION METHODS (v1.0 → v2.0)
+    // ========================================================================
+
+    /**
+     * Check if migration is needed and trigger it
+     */
+    checkAndMigrate() {
+        const settings = this.getSettings();
+        const legacyTransactions = this.getTransactions();
+
+        // Check if migration is needed
+        const needsMigration =
+            !settings.dataVersion ||                        // No version = v1.0
+            settings.dataVersion < '2.0' ||                 // Old version
+            (!settings.migrationCompleted &&                // Migration not completed
+             legacyTransactions.length > 0);                // Has data to migrate
+
+        if (needsMigration) {
+            console.log('🔄 Migration needed: v1.0 → v2.0 (split transaction storage)');
+
+            // Auto-migrate if data exists
+            if (legacyTransactions.length > 0) {
+                this.migrateTransactions();
+            } else {
+                // No data to migrate, just update version
+                this.updateSettings({
+                    dataVersion: '2.0',
+                    migrationCompleted: true
+                });
+                console.log('✓ No data to migrate, version updated to 2.0');
+            }
+        }
+    },
+
+    /**
+     * Migrate transactions from single array to split storage
+     * v1.0: transactions = [all mixed]
+     * v2.0: accountTransactions + assetTransactions
+     */
+    migrateTransactions() {
+        console.log('Starting transaction migration...');
+
+        try {
+            // 1. Load existing transactions
+            const legacyTransactions = this.getTransactions();
+
+            if (legacyTransactions.length === 0) {
+                console.log('No transactions to migrate');
+                this.updateSettings({
+                    dataVersion: '2.0',
+                    migrationCompleted: true
+                });
+                return true;
+            }
+
+            console.log(`Found ${legacyTransactions.length} transactions to migrate`);
+
+            // 2. Create backup with timestamp
+            const backupKey = '_backup_transactions_v1';
+            const backup = {
+                transactions: legacyTransactions,
+                timestamp: new Date().toISOString(),
+                count: legacyTransactions.length
+            };
+            this.saveToLocal(backupKey, backup);
+            console.log(`✓ Backup created: ${backupKey}`);
+
+            // 3. Split transactions by type
+            const accountTypes = ['DEPOSIT', 'WITHDRAW', 'TRANSFER', 'INTEREST'];
+            const assetTypes = ['BUY', 'SELL', 'DIVIDEND'];
+
+            const accountTransactions = [];
+            const assetTransactions = [];
+
+            for (const txn of legacyTransactions) {
+                if (accountTypes.includes(txn.type)) {
+                    accountTransactions.push(txn);
+                } else if (assetTypes.includes(txn.type)) {
+                    assetTransactions.push(txn);
+                } else {
+                    console.warn(`Unknown transaction type: ${txn.type}`, txn);
+                    // Default to asset transactions for unknown types
+                    assetTransactions.push(txn);
+                }
+            }
+
+            console.log(`Split: ${accountTransactions.length} account + ${assetTransactions.length} asset`);
+
+            // 4. Validate split
+            const totalAfterSplit = accountTransactions.length + assetTransactions.length;
+            if (totalAfterSplit !== legacyTransactions.length) {
+                throw new Error(`Validation failed: ${legacyTransactions.length} → ${totalAfterSplit}`);
+            }
+
+            // 5. Save split arrays
+            this.saveAccountTransactions(accountTransactions);
+            this.saveAssetTransactions(assetTransactions);
+            console.log('✓ Split arrays saved to storage');
+
+            // 6. Update settings
+            this.updateSettings({
+                dataVersion: '2.0',
+                migrationCompleted: true,
+                migrationDate: new Date().toISOString(),
+                migrationCount: legacyTransactions.length
+            });
+
+            // 7. Keep legacy array for rollback capability (don't delete yet)
+            console.log('✓ Legacy transactions array kept for rollback');
+
+            // 8. Show success notification
+            Utils.showNotification(
+                `✓ Migration complete: ${accountTransactions.length} account + ${assetTransactions.length} asset transactions`,
+                'success',
+                5000
+            );
+
+            console.log('✓ Migration completed successfully');
+            return true;
+
+        } catch (error) {
+            console.error('Migration failed:', error);
+            Utils.showNotification('Migration failed! Data preserved. Check console.', 'error', 10000);
+            return false;
+        }
+    },
+
+    /**
+     * Rollback migration - restore from backup
+     * Use in console: StorageManager.rollbackMigration()
+     */
+    rollbackMigration() {
+        console.log('Rolling back migration...');
+
+        try {
+            // 1. Load backup
+            const backup = this.loadFromLocal('_backup_transactions_v1');
+
+            if (!backup || !backup.transactions) {
+                console.error('No backup found!');
+                Utils.showNotification('No backup found to rollback', 'error');
+                return false;
+            }
+
+            console.log(`Found backup: ${backup.count} transactions from ${backup.timestamp}`);
+
+            // 2. Restore legacy transactions
+            this.saveTransactions(backup.transactions);
+            console.log('✓ Restored legacy transactions array');
+
+            // 3. Clear split arrays
+            this.saveAccountTransactions([]);
+            this.saveAssetTransactions([]);
+            console.log('✓ Cleared split arrays');
+
+            // 4. Reset settings
+            this.updateSettings({
+                dataVersion: '1.0',
+                migrationCompleted: false,
+                rollbackDate: new Date().toISOString()
+            });
+            console.log('✓ Settings reset to v1.0');
+
+            // 5. Show success
+            Utils.showNotification(
+                `✓ Rollback complete: ${backup.count} transactions restored`,
+                'success',
+                5000
+            );
+
+            console.log('✓ Rollback completed. Please reload the page.');
+            return true;
+
+        } catch (error) {
+            console.error('Rollback failed:', error);
+            Utils.showNotification('Rollback failed! Check console.', 'error');
+            return false;
+        }
     }
 };
 

@@ -72,8 +72,19 @@ const TransactionManager = {
             this.processWithdrawTransaction(transaction);
         }
 
-        // Save transaction
-        StorageManager.addTransaction(transaction);
+        // Save transaction to appropriate array based on type
+        const accountTypes = ['DEPOSIT', 'WITHDRAW', 'TRANSFER', 'INTEREST'];
+        const assetTypes = ['BUY', 'SELL', 'DIVIDEND'];
+
+        if (accountTypes.includes(transaction.type)) {
+            StorageManager.addAccountTransaction(transaction);
+        } else if (assetTypes.includes(transaction.type)) {
+            StorageManager.addAssetTransaction(transaction);
+        } else {
+            // Fallback: save to asset transactions for unknown types
+            console.warn(`Unknown transaction type: ${transaction.type}, saving to asset transactions`);
+            StorageManager.addAssetTransaction(transaction);
+        }
 
         Utils.showNotification(`Transaction recorded successfully!`, 'success');
         return transaction;
@@ -405,9 +416,9 @@ const TransactionManager = {
             throw new Error('Failed to update account balances');
         }
 
-        // Save single transfer transaction
-        StorageManager.addTransaction(transaction);
-        
+        // Save transfer transaction to account transactions
+        StorageManager.addAccountTransaction(transaction);
+
         // NEW: If transferring THB → USD, create USD lot for FIFO tracking
         if (sourceAccount.currency === 'THB' && destAccount.currency === 'USD' && window.FIFOManager) {
             try {
@@ -417,12 +428,12 @@ const TransactionManager = {
                 console.warn('USD lot creation failed:', error.message);
             }
         }
-        
+
         Utils.showNotification(
             `Transferred ${Utils.formatCurrency(data.totalAmount, sourceAccount.currency)} from ${sourceAccount.name} to ${destAccount.name}`,
             'success'
         );
-        
+
         return transaction;
     },
 
@@ -505,12 +516,16 @@ const TransactionManager = {
     },
 
     /**
-     * Get all transactions
-     * @param {object} filters - Filter options
+     * Get all transactions (merged from both arrays, sorted by date)
+     * This is the main method to use for reading transactions after v2.0 migration
+     * @param {object} filters - Filter criteria
      * @returns {array} Array of transactions
      */
-    getTransactions(filters = {}) {
-        let transactions = StorageManager.getTransactions();
+    getAllTransactions(filters = {}) {
+        // Merge account and asset transactions
+        const accountTransactions = StorageManager.getAccountTransactions() || [];
+        const assetTransactions = StorageManager.getAssetTransactions() || [];
+        let transactions = [...accountTransactions, ...assetTransactions];
 
         // Apply filters
         if (filters.portfolioId) {
@@ -544,37 +559,149 @@ const TransactionManager = {
     },
 
     /**
-     * Get transaction by ID
+     * Get account transactions only (DEPOSIT, WITHDRAW, TRANSFER, INTEREST)
+     * @param {object} filters - Filter criteria
+     * @returns {array} Array of account transactions
+     */
+    getAccountTransactions(filters = {}) {
+        let transactions = StorageManager.getAccountTransactions() || [];
+
+        // Apply filters (same as getAllTransactions)
+        if (filters.portfolioId) {
+            transactions = transactions.filter(t => t.portfolioId === filters.portfolioId);
+        }
+
+        if (filters.accountId) {
+            transactions = transactions.filter(t => t.accountId === filters.accountId);
+        }
+
+        if (filters.type) {
+            transactions = transactions.filter(t => t.type === filters.type);
+        }
+
+        if (filters.startDate) {
+            transactions = transactions.filter(t => new Date(t.date) >= new Date(filters.startDate));
+        }
+
+        if (filters.endDate) {
+            transactions = transactions.filter(t => new Date(t.date) <= new Date(filters.endDate));
+        }
+
+        // Sort by date (newest first)
+        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return transactions;
+    },
+
+    /**
+     * Get asset transactions only (BUY, SELL, DIVIDEND)
+     * @param {object} filters - Filter criteria
+     * @returns {array} Array of asset transactions
+     */
+    getAssetTransactions(filters = {}) {
+        let transactions = StorageManager.getAssetTransactions() || [];
+
+        // Apply filters (same as getAllTransactions)
+        if (filters.portfolioId) {
+            transactions = transactions.filter(t => t.portfolioId === filters.portfolioId);
+        }
+
+        if (filters.accountId) {
+            transactions = transactions.filter(t => t.accountId === filters.accountId);
+        }
+
+        if (filters.assetId) {
+            transactions = transactions.filter(t => t.assetId === filters.assetId);
+        }
+
+        if (filters.type) {
+            transactions = transactions.filter(t => t.type === filters.type);
+        }
+
+        if (filters.startDate) {
+            transactions = transactions.filter(t => new Date(t.date) >= new Date(filters.startDate));
+        }
+
+        if (filters.endDate) {
+            transactions = transactions.filter(t => new Date(t.date) <= new Date(filters.endDate));
+        }
+
+        // Sort by date (newest first)
+        transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return transactions;
+    },
+
+    /**
+     * Get all transactions (Legacy method for backward compatibility)
+     * Now uses getAllTransactions internally
+     * @param {object} filters - Filter options
+     * @returns {array} Array of transactions
+     */
+    getTransactions(filters = {}) {
+        // Use new getAllTransactions method
+        return this.getAllTransactions(filters);
+    },
+
+    /**
+     * Get transaction by ID (searches both arrays)
      * @param {string} transactionId - Transaction ID
      * @returns {object|null} Transaction object
      */
     getTransaction(transactionId) {
-        const transactions = StorageManager.getTransactions();
-        return transactions.find(t => t.id === transactionId) || null;
+        // Search in account transactions
+        const accountTransactions = StorageManager.getAccountTransactions();
+        let transaction = accountTransactions.find(t => t.id === transactionId);
+
+        if (transaction) {
+            return { ...transaction, _arrayType: 'account' };
+        }
+
+        // Search in asset transactions
+        const assetTransactions = StorageManager.getAssetTransactions();
+        transaction = assetTransactions.find(t => t.id === transactionId);
+
+        if (transaction) {
+            return { ...transaction, _arrayType: 'asset' };
+        }
+
+        return null;
     },
 
     /**
-     * Update transaction
+     * Update transaction (searches both arrays)
      * @param {string} transactionId - Transaction ID
      * @param {object} updates - Updates to apply
      * @returns {boolean} Success status
      */
     updateTransaction(transactionId, updates) {
-        const transactions = StorageManager.getTransactions();
-        const index = transactions.findIndex(t => t.id === transactionId);
-        
+        // Try account transactions first
+        const accountTransactions = StorageManager.getAccountTransactions();
+        let index = accountTransactions.findIndex(t => t.id === transactionId);
+
         if (index !== -1) {
-            transactions[index] = { ...transactions[index], ...updates };
-            StorageManager.saveTransactions(transactions);
+            accountTransactions[index] = { ...accountTransactions[index], ...updates };
+            StorageManager.saveAccountTransactions(accountTransactions);
             Utils.showNotification('Transaction updated successfully', 'success');
             return true;
         }
-        
+
+        // Try asset transactions
+        const assetTransactions = StorageManager.getAssetTransactions();
+        index = assetTransactions.findIndex(t => t.id === transactionId);
+
+        if (index !== -1) {
+            assetTransactions[index] = { ...assetTransactions[index], ...updates };
+            StorageManager.saveAssetTransactions(assetTransactions);
+            Utils.showNotification('Transaction updated successfully', 'success');
+            return true;
+        }
+
         return false;
     },
 
     /**
-     * Delete transaction
+     * Delete transaction (searches both arrays)
      * @param {string} transactionId - Transaction ID
      * @returns {boolean} Success status
      */
@@ -587,24 +714,30 @@ const TransactionManager = {
             // Refund to account
             const totalCost = transaction.totalAmount + transaction.fee;
             AccountManager.deposit(transaction.accountId, totalCost, `Reversed: Purchase ${transaction.assetTicker}`, new Date().toISOString());
-            
+
             // Remove from position
             this.updatePosition(transaction.portfolioId, transaction.assetId, transaction.quantity, transaction.pricePerUnit, 'REMOVE');
-            
+
         } else if (transaction.type === 'SELL' && transaction.accountId) {
             // Deduct from account
             const proceeds = transaction.totalAmount - transaction.fee;
             AccountManager.withdraw(transaction.accountId, proceeds, `Reversed: Sale of ${transaction.assetTicker}`, new Date().toISOString());
-            
+
             // Add back to position
             this.updatePosition(transaction.portfolioId, transaction.assetId, transaction.quantity, transaction.pricePerUnit, 'ADD');
         }
 
-        // Delete transaction
-        const transactions = StorageManager.getTransactions();
-        const filtered = transactions.filter(t => t.id !== transactionId);
-        StorageManager.saveTransactions(filtered);
-        
+        // Delete from appropriate array
+        if (transaction._arrayType === 'account') {
+            const accountTransactions = StorageManager.getAccountTransactions();
+            const filtered = accountTransactions.filter(t => t.id !== transactionId);
+            StorageManager.saveAccountTransactions(filtered);
+        } else {
+            const assetTransactions = StorageManager.getAssetTransactions();
+            const filtered = assetTransactions.filter(t => t.id !== transactionId);
+            StorageManager.saveAssetTransactions(filtered);
+        }
+
         Utils.showNotification('Transaction deleted', 'info');
         return true;
     },
