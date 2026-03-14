@@ -485,7 +485,8 @@ const AccountManager = {
             usdLotsUsed: usdLotsUsed     // Track which lots were consumed
         };
 
-        StorageManager.addTransaction(transaction);
+        StorageManager.addAccountTransaction(transaction);
+        console.log('✅ Deposit saved to accountTransactions storage');
         return true;
     },
 
@@ -495,10 +496,9 @@ const AccountManager = {
      * @returns {array} Array of transactions
      */
     getAccountHistory(accountId) {
-        const transactions = StorageManager.getTransactions();
-        return transactions
-            .filter(t => t.accountId === accountId)
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Use TransactionManager which merges both v2.0 storage keys
+        const transactions = TransactionManager.getAccountTransactions({ accountId: accountId });
+        return transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
     },
 
     /**
