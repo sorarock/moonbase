@@ -674,3 +674,43 @@ button:disabled,
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+
+/* ============================================================================
+   TRANSACTION TYPE SELECTOR BUTTONS
+   ============================================================================ */
+
+.transaction-type-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-background-gray);
+    border: 2px solid transparent;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.transaction-type-btn:hover {
+    background: var(--color-background-hover);
+    border-color: var(--color-accent-blue);
+    transform: translateY(-2px);
+}
+
+.transaction-type-btn .icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.transaction-type-btn .type-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+}
+
+.transaction-type-btn .type-desc {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+}

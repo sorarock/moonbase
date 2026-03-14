@@ -1623,18 +1623,12 @@ const App = {
                         </div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm);">
-                        <button class="btn-secondary btn-sm" onclick="showDepositModal('${account.id}')">
-                            💰 Deposit
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); max-width: 400px;">
+                        <button class="btn-primary" onclick="showAccountTransactionTypeSelector('${account.id}')">
+                            ➕ Add Transaction
                         </button>
-                        <button class="btn-secondary btn-sm" onclick="showWithdrawModal('${account.id}')">
-                            💸 Withdraw
-                        </button>
-                        <button class="btn-secondary btn-sm" onclick="showInterestModal('${account.id}')">
-                            💎 Interest
-                        </button>
-                        <button class="btn-secondary btn-sm" onclick="showEditAccountModal('${account.id}')">
-                            ✏️ Edit
+                        <button class="btn-secondary" onclick="showEditAccountModal('${account.id}')">
+                            ✏️ Edit Account
                         </button>
                     </div>
                     
@@ -5519,6 +5513,71 @@ function renderCashFlowTimeline(portfolioId) {
             </tfoot>
         </table>
     `;
+}
+
+// ============================================================================
+// Account Transaction Type Selector Modal Functions
+// ============================================================================
+
+let currentAccountForTransaction = null;
+
+/**
+ * Show account transaction type selector modal
+ */
+function showAccountTransactionTypeSelector(accountId) {
+    currentAccountForTransaction = accountId;
+
+    // Get account name
+    const account = AccountManager.getAccount(accountId);
+    if (!account) {
+        Utils.showNotification('Account not found', 'error');
+        return;
+    }
+
+    // Update account name in modal
+    document.getElementById('accountTransactionTypeName').textContent = account.name;
+
+    // Show modal
+    document.getElementById('accountTransactionTypeSelectorModal').classList.add('active');
+}
+
+/**
+ * Hide account transaction type selector modal
+ */
+function hideAccountTransactionTypeSelector() {
+    document.getElementById('accountTransactionTypeSelectorModal').classList.remove('active');
+    currentAccountForTransaction = null;
+}
+
+/**
+ * Select account transaction type and show appropriate form
+ */
+function selectAccountTransactionType(type) {
+    if (!currentAccountForTransaction) {
+        Utils.showNotification('No account selected', 'error');
+        return;
+    }
+
+    // Hide selector modal
+    hideAccountTransactionTypeSelector();
+
+    // Show appropriate transaction modal with pre-filled account
+    switch(type) {
+        case 'DEPOSIT':
+            showDepositModal(currentAccountForTransaction);
+            break;
+        case 'WITHDRAW':
+            showWithdrawModal(currentAccountForTransaction);
+            break;
+        case 'TRANSFER':
+            showTransferModal(currentAccountForTransaction);
+            break;
+        case 'INTEREST':
+            showInterestModal(currentAccountForTransaction);
+            break;
+        default:
+            Utils.showNotification('Unknown transaction type', 'error');
+    }
 }
 
 // Export for use in other modules

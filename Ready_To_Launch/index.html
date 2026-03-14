@@ -14,7 +14,7 @@
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="css/main.css?v=20250308006">
-    <link rel="stylesheet" href="css/components.css?v=20250308006">
+    <link rel="stylesheet" href="css/components.css?v=20260314002">
     <link rel="stylesheet" href="css/pages.css?v=20250308006">
     
     <!-- External Libraries via CDN -->
@@ -1808,6 +1808,55 @@
         </div>
     </div>
 
+    <!-- Account Transaction Type Selector Modal -->
+    <div id="accountTransactionTypeSelectorModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Select Transaction Type</h2>
+                <button class="close-modal" onclick="hideAccountTransactionTypeSelector()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--space-lg);">
+                    Choose the type of transaction for <span id="accountTransactionTypeName" style="font-weight: 600;"></span>
+                </p>
+
+                <div style="display: grid; gap: var(--space-md);">
+                    <button class="transaction-type-btn" onclick="selectAccountTransactionType('DEPOSIT')">
+                        <span class="icon">💰</span>
+                        <div>
+                            <div class="type-title">Deposit</div>
+                            <div class="type-desc">Add money to this account</div>
+                        </div>
+                    </button>
+
+                    <button class="transaction-type-btn" onclick="selectAccountTransactionType('WITHDRAW')">
+                        <span class="icon">💸</span>
+                        <div>
+                            <div class="type-title">Withdraw</div>
+                            <div class="type-desc">Remove money from this account</div>
+                        </div>
+                    </button>
+
+                    <button class="transaction-type-btn" onclick="selectAccountTransactionType('TRANSFER')">
+                        <span class="icon">🔄</span>
+                        <div>
+                            <div class="type-title">Transfer</div>
+                            <div class="type-desc">Move money between accounts</div>
+                        </div>
+                    </button>
+
+                    <button class="transaction-type-btn" onclick="selectAccountTransactionType('INTEREST')">
+                        <span class="icon">💎</span>
+                        <div>
+                            <div class="type-title">Interest</div>
+                            <div class="type-desc">Record interest payment</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <link rel="stylesheet" href="css/dca-wizard.css?v=20250308008">
     <script src="js/dca-wizard.js?v=20250308013"></script>
@@ -1826,6 +1875,6 @@
     <script src="js/reports.js?v=20250308006"></script>
     <script src="js/export.js?v=20250308006"></script>
     <script src="js/import-excel.js?v=20260309009"></script>
-    <script src="js/app.js?v=20260310009"></script>
+    <script src="js/app.js?v=20260314002"></script>
 </body>
 </html>
