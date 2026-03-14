@@ -5538,14 +5538,14 @@ function showAccountTransactionTypeSelector(accountId) {
     document.getElementById('accountTransactionTypeName').textContent = account.name;
 
     // Show modal
-    document.getElementById('accountTransactionTypeSelectorModal').classList.add('active');
+    Utils.toggleElement('#accountTransactionTypeSelectorModal', true);
 }
 
 /**
  * Hide account transaction type selector modal
  */
 function hideAccountTransactionTypeSelector() {
-    document.getElementById('accountTransactionTypeSelectorModal').classList.remove('active');
+    Utils.toggleElement('#accountTransactionTypeSelectorModal', false);
     currentAccountForTransaction = null;
 }
 
