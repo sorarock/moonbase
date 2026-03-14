@@ -5578,25 +5578,29 @@ function selectAccountTransactionType(type) {
         return;
     }
 
-    // Hide selector modal
+    // Save accountId to local variable BEFORE hiding modal
+    const accountId = currentAccountForTransaction;
+    console.log('🔵 Saved accountId:', accountId);
+
+    // Hide selector modal (this sets currentAccountForTransaction = null)
     hideAccountTransactionTypeSelector();
     console.log('🔵 Selector modal hidden');
 
-    // Show appropriate transaction modal with pre-filled account
+    // Show appropriate transaction modal with saved accountId
     switch(type) {
         case 'DEPOSIT':
-            console.log('🔵 About to call showDepositModal with accountId:', currentAccountForTransaction);
-            showDepositModal(currentAccountForTransaction);
+            console.log('🔵 About to call showDepositModal with accountId:', accountId);
+            showDepositModal(accountId);
             console.log('🔵 showDepositModal call completed');
             break;
         case 'WITHDRAW':
-            showWithdrawModal(currentAccountForTransaction);
+            showWithdrawModal(accountId);
             break;
         case 'TRANSFER':
-            showTransferModal(currentAccountForTransaction);
+            showTransferModal(accountId);
             break;
         case 'INTEREST':
-            showInterestModal(currentAccountForTransaction);
+            showInterestModal(accountId);
             break;
         default:
             Utils.showNotification('Unknown transaction type', 'error');
