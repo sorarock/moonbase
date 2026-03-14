@@ -3143,9 +3143,17 @@ window.loadAccountAssetOptions = function() {
 };
 
 window.showDepositModal = function(accountId) {
-    const account = AccountManager.getAccount(accountId);
-    if (!account) return;
+    console.log('🟢 showDepositModal called with accountId:', accountId);
 
+    const account = AccountManager.getAccount(accountId);
+    console.log('🟢 Account retrieved:', account);
+
+    if (!account) {
+        console.error('❌ Account not found! accountId:', accountId);
+        return;
+    }
+
+    console.log('🟢 Populating form fields...');
     document.getElementById('operationTitle').textContent = 'Deposit Money';
     document.getElementById('operationAccountId').value = accountId;
     document.getElementById('operationType').value = 'DEPOSIT';
@@ -3166,7 +3174,15 @@ window.showDepositModal = function(accountId) {
         document.getElementById('operationExchangeRate').required = false;
     }
 
+    console.log('🟢 About to show modal #accountOperationModal');
+    const modalElement = document.getElementById('accountOperationModal');
+    console.log('🟢 Modal element found:', modalElement);
+    console.log('🟢 Modal current classes:', modalElement ? modalElement.className : 'NOT FOUND');
+
     Utils.toggleElement('#accountOperationModal', true);
+
+    console.log('🟢 toggleElement called, modal should be visible now');
+    console.log('🟢 Modal classes after toggle:', modalElement ? modalElement.className : 'NOT FOUND');
 };
 
 window.showWithdrawModal = function(accountId) {
@@ -5553,18 +5569,25 @@ function hideAccountTransactionTypeSelector() {
  * Select account transaction type and show appropriate form
  */
 function selectAccountTransactionType(type) {
+    console.log('🔵 selectAccountTransactionType called with type:', type);
+    console.log('🔵 currentAccountForTransaction:', currentAccountForTransaction);
+
     if (!currentAccountForTransaction) {
+        console.error('❌ No account selected!');
         Utils.showNotification('No account selected', 'error');
         return;
     }
 
     // Hide selector modal
     hideAccountTransactionTypeSelector();
+    console.log('🔵 Selector modal hidden');
 
     // Show appropriate transaction modal with pre-filled account
     switch(type) {
         case 'DEPOSIT':
+            console.log('🔵 About to call showDepositModal with accountId:', currentAccountForTransaction);
             showDepositModal(currentAccountForTransaction);
+            console.log('🔵 showDepositModal call completed');
             break;
         case 'WITHDRAW':
             showWithdrawModal(currentAccountForTransaction);
