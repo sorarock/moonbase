@@ -1623,7 +1623,7 @@ const App = {
                         </div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); max-width: 400px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
                         <button class="btn-primary" onclick="showAccountTransactionTypeSelector('${account.id}')">
                             ➕ Add Transaction
                         </button>
