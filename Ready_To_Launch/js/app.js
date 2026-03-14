@@ -5580,5 +5580,10 @@ function selectAccountTransactionType(type) {
     }
 }
 
+// Export modal functions to window scope for HTML onclick handlers
+window.showAccountTransactionTypeSelector = showAccountTransactionTypeSelector;
+window.hideAccountTransactionTypeSelector = hideAccountTransactionTypeSelector;
+window.selectAccountTransactionType = selectAccountTransactionType;
+
 // Export for use in other modules
 window.App = App;
