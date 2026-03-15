@@ -4069,9 +4069,9 @@ function loadDestinationAccounts() {
         return;
     }
     
-    // Get all accounts except the source account
-    const accounts = AccountManager.getAllAccounts().filter(acc => 
-        acc.portfolioId === portfolioId && acc.id !== sourceAccountId
+    // Get all accounts except the source account (from all portfolios for cross-portfolio transfers)
+    const accounts = AccountManager.getAllAccounts().filter(acc =>
+        acc.id !== sourceAccountId
     );
     
     destinationSelect.innerHTML = '<option value="">Select Destination Account</option>' +
