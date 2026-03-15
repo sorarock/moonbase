@@ -3244,6 +3244,35 @@ window.showInterestModal = function(accountId) {
     Utils.toggleElement('#accountOperationModal', true);
 };
 
+window.showTransferModal = function(accountId) {
+    const account = AccountManager.getAccount(accountId);
+    if (!account) {
+        Utils.showNotification('Account not found', 'error');
+        return;
+    }
+
+    // Get portfolio
+    const portfolio = PortfolioManager.getPortfolio(account.portfolioId);
+    if (!portfolio) {
+        Utils.showNotification('Portfolio not found', 'error');
+        return;
+    }
+
+    // Reset and populate the record transaction form for TRANSFER
+    document.getElementById('txnPortfolio').value = account.portfolioId;
+    document.getElementById('txnType').value = 'TRANSFER';
+    document.getElementById('txnAccount').value = accountId;
+    document.getElementById('txnDate').value = new Date().toISOString().split('T')[0];
+
+    // Call updateTransactionFields to setup the form properly
+    // This will trigger loadDestinationAccounts and show/hide fields appropriately
+    updateTransactionFields();
+
+    // Show the modal
+    const modal = document.getElementById('recordTransactionModal');
+    Utils.toggleElement(modal, true);
+};
+
 window.closeAccountOperationModal = function() {
     Utils.toggleElement('#accountOperationModal', false);
 };
