@@ -475,6 +475,20 @@ a:hover {
     margin-bottom: var(--space-md);
 }
 
+.close-button {
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    line-height: 1;
+    transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.close-button:hover {
+    color: var(--color-text-primary);
+}
+
 .modal-actions {
     display: flex;
     gap: var(--space-md);

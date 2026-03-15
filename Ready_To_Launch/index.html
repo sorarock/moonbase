@@ -13,7 +13,7 @@
     <title>Portfolio Manager</title>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/main.css?v=20250308006">
+    <link rel="stylesheet" href="css/main.css?v=20260315001">
     <link rel="stylesheet" href="css/components.css?v=20260314002">
     <link rel="stylesheet" href="css/pages.css?v=20250308006">
     
@@ -30,7 +30,7 @@
 <body>
     <!-- Version check and cache bypass -->
     <script>
-    const CURRENT_VERSION = '20260310009'; // Increment this on every update
+    const CURRENT_VERSION = '20260315001'; // Increment this on every update
     const storedVersion = sessionStorage.getItem('appVersion');
     if (storedVersion && storedVersion !== CURRENT_VERSION) {
         console.log('App version changed from', storedVersion, 'to', CURRENT_VERSION);
@@ -1857,6 +1857,17 @@
         </div>
     </div>
 
+    <!-- FIFO Lot Report Modal -->
+    <div id="fifoLotReportModal" class="modal hidden">
+        <div class="modal-content" style="max-width: 900px;">
+            <span class="close-button" onclick="closeFIFOLotReportModal()">&times;</span>
+            <h3>FIFO Lot Report</h3>
+            <div id="fifoLotReportContent">
+                <!-- Dynamic content populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <link rel="stylesheet" href="css/dca-wizard.css?v=20250308008">
     <script src="js/dca-wizard.js?v=20250308013"></script>
@@ -1875,6 +1886,6 @@
     <script src="js/reports.js?v=20250308006"></script>
     <script src="js/export.js?v=20250308006"></script>
     <script src="js/import-excel.js?v=20260309009"></script>
-    <script src="js/app.js?v=20260314007"></script>
+    <script src="js/app.js?v=20260315001"></script>
 </body>
 </html>
