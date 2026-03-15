@@ -3258,13 +3258,30 @@ window.showTransferModal = function(accountId) {
         return;
     }
 
-    // Reset and populate the record transaction form for TRANSFER
+    // Load portfolio options first (required before setting values)
+    const portfolios = PortfolioManager.getAllPortfolios();
+    const portfolioSelect = document.getElementById('txnPortfolio');
+
+    if (portfolios.length === 0) {
+        Utils.showNotification('Please create a portfolio first', 'error');
+        return;
+    }
+
+    portfolioSelect.innerHTML = '<option value="">Select Portfolio</option>' +
+        portfolios.map(p => '<option value="' + p.id + '">' + p.name + '</option>').join('');
+
+    // Now set the form values
     document.getElementById('txnPortfolio').value = account.portfolioId;
     document.getElementById('txnType').value = 'TRANSFER';
-    document.getElementById('txnAccount').value = accountId;
     document.getElementById('txnDate').value = new Date().toISOString().split('T')[0];
 
-    // Call updateTransactionFields to setup the form properly
+    // Trigger portfolio change to load accounts
+    updateTransactionAssets();
+
+    // Set the source account after accounts are loaded
+    document.getElementById('txnAccount').value = accountId;
+
+    // Call updateTransactionFields to setup transfer-specific fields
     // This will trigger loadDestinationAccounts and show/hide fields appropriately
     updateTransactionFields();
 
