@@ -4187,8 +4187,10 @@ function setupTransactionFormHandler() {
     
     // Add new listener
     document.getElementById('recordTransactionForm').addEventListener('submit', (e) => {
+        console.log('🔴 DEBUG: Form submit event triggered');
         e.preventDefault();
-        
+        console.log('🔴 DEBUG: preventDefault called');
+
         try {
             // Safely get form values with null checks
             const getElementValue = (id, defaultValue = '') => {
@@ -4262,41 +4264,67 @@ function setupTransactionFormHandler() {
                 transactionData.pricePerUnit = parseFloat(getElementValue('txnPrice', '0')) || 0;
             }
 
-            console.log('Transaction data:', transactionData);
+            console.log('🔴 DEBUG: Transaction data prepared:', transactionData);
+
+            // Check if TransactionManager exists
+            if (!TransactionManager || typeof TransactionManager.recordTransaction !== 'function') {
+                console.error('🔴 DEBUG: TransactionManager not available!');
+                throw new Error('TransactionManager not initialized');
+            }
+
+            console.log('🔴 DEBUG: Calling TransactionManager.recordTransaction...');
             TransactionManager.recordTransaction(transactionData);
+            console.log('🔴 DEBUG: Transaction recorded successfully');
+
+            console.log('🔴 DEBUG: Closing modal...');
             closeRecordTransactionModal();
+            console.log('🔴 DEBUG: Modal closed');
 
             // Reload the current page view to show updated balances (don't navigate away)
             const currentPage = document.querySelector('.page:not(.hidden)');
+            console.log('🔴 DEBUG: Current page detected:', currentPage?.id);
+
             if (currentPage) {
                 const pageId = currentPage.id;
+                console.log('🔴 DEBUG: About to reload page:', pageId);
                 switch(pageId) {
                     case 'dashboardPage':
+                        console.log('🔴 DEBUG: Loading dashboard...');
                         App.loadDashboard();
                         break;
                     case 'portfoliosPage':
+                        console.log('🔴 DEBUG: Loading portfolios...');
                         App.loadPortfolios();
                         break;
                     case 'accountsPage':
+                        console.log('🔴 DEBUG: Loading accounts...');
                         App.loadAccounts();
                         break;
                     case 'transactionsPage':
+                        console.log('🔴 DEBUG: Loading transactions...');
                         App.loadTransactions();
                         break;
                     case 'reportsPage':
+                        console.log('🔴 DEBUG: Loading reports...');
                         App.loadReports();
                         break;
                     default:
                         // Default to reloading accounts if unclear
+                        console.log('🔴 DEBUG: Default - loading accounts...');
                         App.loadAccounts();
                 }
+                console.log('🔴 DEBUG: Page reload completed');
             } else {
                 // Fallback to accounts page
+                console.log('🔴 DEBUG: No current page detected, fallback to accounts');
                 App.loadAccounts();
             }
 
+            console.log('🔴 DEBUG: Form handler completed successfully');
+
         } catch (error) {
-            console.error('Error recording transaction:', error);
+            console.error('🔴 DEBUG: Error in form handler:', error);
+            console.error('🔴 DEBUG: Error stack:', error.stack);
             Utils.showNotification(error.message, 'error');
         }
     });
