@@ -4261,12 +4261,40 @@ function setupTransactionFormHandler() {
                 transactionData.quantity = parseFloat(getElementValue('txnQuantity', '0')) || 0;
                 transactionData.pricePerUnit = parseFloat(getElementValue('txnPrice', '0')) || 0;
             }
-            
+
             console.log('Transaction data:', transactionData);
             TransactionManager.recordTransaction(transactionData);
             closeRecordTransactionModal();
-            App.loadTransactions();
-            
+
+            // Reload the current page view to show updated balances (don't navigate away)
+            const currentPage = document.querySelector('.page:not(.hidden)');
+            if (currentPage) {
+                const pageId = currentPage.id;
+                switch(pageId) {
+                    case 'dashboardPage':
+                        App.loadDashboard();
+                        break;
+                    case 'portfoliosPage':
+                        App.loadPortfolios();
+                        break;
+                    case 'accountsPage':
+                        App.loadAccounts();
+                        break;
+                    case 'transactionsPage':
+                        App.loadTransactions();
+                        break;
+                    case 'reportsPage':
+                        App.loadReports();
+                        break;
+                    default:
+                        // Default to reloading accounts if unclear
+                        App.loadAccounts();
+                }
+            } else {
+                // Fallback to accounts page
+                App.loadAccounts();
+            }
+
         } catch (error) {
             console.error('Error recording transaction:', error);
             Utils.showNotification(error.message, 'error');
