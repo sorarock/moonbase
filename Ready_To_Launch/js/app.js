@@ -1623,18 +1623,13 @@ const App = {
                         </div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: ${account.type === 'fcd_account' ? '1fr 1fr 1fr' : '1fr 1fr'}; gap: var(--space-md);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
                         <button class="btn-primary" onclick="showAccountTransactionTypeSelector('${account.id}')">
                             ➕ Add Transaction
                         </button>
                         <button class="btn-secondary" onclick="showEditAccountModal('${account.id}')">
                             ✏️ Edit Account
                         </button>
-                        ${account.type === 'fcd_account' ? `
-                            <button class="btn-secondary" onclick="showFIFOLotReport('${account.id}')">
-                                📊 FIFO Report
-                            </button>
-                        ` : ''}
                     </div>
                     
                     ${account.notes ? `
@@ -5613,29 +5608,33 @@ function selectAccountTransactionType(type) {
 }
 
 /**
- * Show FIFO Lot Report Modal
- * @param {string} accountId - Account ID
+ * Show FIFO Lot Report Modal - Global report for all FCD accounts
  */
-function showFIFOLotReport(accountId) {
-    const account = AccountManager.getAccount(accountId);
+function showFIFOLotReport() {
+    // Get all accounts and filter for FCD accounts
+    const allAccounts = AccountManager.getAllAccounts();
+    const fcdAccounts = allAccounts.filter(acc => acc.type === 'fcd_account');
 
-    if (!account) {
-        Utils.showNotification('Account not found', 'error');
+    if (fcdAccounts.length === 0) {
+        Utils.showNotification('No FCD accounts found', 'info');
         return;
     }
 
-    // Only show for FCD accounts
-    if (account.type !== 'fcd_account') {
+    // Get all USD currency lots
+    const allLots = FIFOManager.getAllLots();
+    const usdLots = allLots.filter(lot => lot.assetId === 'USD_CURRENCY');
+
+    if (usdLots.length === 0) {
         const modal = document.getElementById('fifoLotReportModal');
         const content = document.getElementById('fifoLotReportContent');
 
         content.innerHTML = `
             <div style="padding: var(--space-lg); text-align: center;">
                 <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-                    FIFO lot tracking is only available for FCD (Foreign Currency Deposit) accounts.
+                    No FIFO lots found.
                 </p>
                 <p style="font-size: 14px; color: var(--color-text-secondary);">
-                    This account is a ${account.type === 'thb_savings' ? 'THB Savings' : account.type} account.
+                    FIFO lots are created when you deposit USD into FCD accounts.
                 </p>
             </div>
         `;
@@ -5644,34 +5643,36 @@ function showFIFOLotReport(accountId) {
         return;
     }
 
-    // Get all lots for this account
-    const allLots = FIFOManager.getAllLots();
-    const accountLots = allLots.filter(lot =>
-        lot.accountId === accountId &&
-        lot.assetId === 'USD_CURRENCY'
-    );
+    // Get portfolio and account information for each lot
+    usdLots.forEach(lot => {
+        const account = allAccounts.find(acc => acc.id === lot.accountId);
+        if (account) {
+            lot.accountName = account.name;
+            lot.portfolioId = account.portfolioId;
 
-    // Separate by status
-    const activeLots = accountLots.filter(lot => lot.status === 'OPEN').sort((a, b) =>
-        new Date(a.purchaseDate) - new Date(b.purchaseDate)
-    );
-    const consumedLots = accountLots.filter(lot => lot.status === 'CLOSED').sort((a, b) =>
-        new Date(b.purchaseDate) - new Date(a.purchaseDate)
-    );
+            const portfolio = PortfolioManager.getPortfolio(account.portfolioId);
+            lot.portfolioName = portfolio ? portfolio.name : 'Unknown';
+        }
+    });
 
     // For consumed lots, find which transactions used them
     const assetTransactions = StorageManager.loadFromLocal('assetTransactions') || [];
-    consumedLots.forEach(lot => {
-        const buyTx = assetTransactions.find(tx =>
-            tx.type === 'BUY' &&
-            tx.usdLotsUsed &&
-            tx.usdLotsUsed.some(used => used.lotId === lot.id)
-        );
-        lot.consumedByTransaction = buyTx;
+    usdLots.forEach(lot => {
+        if (lot.status === 'CLOSED') {
+            const buyTx = assetTransactions.find(tx =>
+                tx.type === 'BUY' &&
+                tx.usdLotsUsed &&
+                tx.usdLotsUsed.some(used => used.lotId === lot.id)
+            );
+            lot.consumedByTransaction = buyTx;
+        }
     });
 
-    // Render the tables
-    renderFIFOLotTables(activeLots, consumedLots, account);
+    // Sort by purchase date (newest first)
+    usdLots.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
+
+    // Render the simple table
+    renderFIFOLotTable(usdLots);
 
     // Show modal
     const modal = document.getElementById('fifoLotReportModal');
@@ -5691,160 +5692,93 @@ function closeFIFOLotReportModal() {
 }
 
 /**
- * Render FIFO Lot Tables
- * @param {array} activeLots - Active (OPEN) lots
- * @param {array} consumedLots - Consumed (CLOSED) lots
- * @param {object} account - Account object
+ * Render FIFO Lot Table - Simple tabular report for all lots
+ * @param {array} lots - All USD currency lots
  */
-function renderFIFOLotTables(activeLots, consumedLots, account) {
+function renderFIFOLotTable(lots) {
     const content = document.getElementById('fifoLotReportContent');
 
     // Calculate summary statistics
+    const activeLots = lots.filter(lot => lot.status === 'OPEN');
     const totalActiveAmount = activeLots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
     const totalActiveCostBasis = activeLots.reduce((sum, lot) =>
         sum + (lot.remainingQuantity * lot.pricePerUnit), 0
     );
-    const avgExchangeRate = totalActiveAmount > 0 ? totalActiveCostBasis / totalActiveAmount : 0;
 
     let html = `
         <div style="margin-bottom: var(--space-lg);">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); padding: var(--space-md); background-color: var(--color-bg-secondary); border-radius: var(--radius-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md); background-color: var(--color-bg-secondary); border-radius: var(--radius-md);">
                 <div>
-                    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Account</div>
-                    <div style="font-weight: 600;">${account.name}</div>
+                    <div style="font-size: 14px; color: var(--color-text-secondary);">Total Lots</div>
+                    <div style="font-weight: 600; font-size: 20px;">${lots.length}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Active Lots</div>
-                    <div style="font-weight: 600;">${activeLots.length} lots</div>
+                    <div style="font-size: 14px; color: var(--color-text-secondary);">Active Lots</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--color-success);">${activeLots.length}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Total USD Remaining</div>
-                    <div style="font-weight: 600; color: var(--color-success);">$${Utils.formatCurrency(totalActiveAmount, 'USD')}</div>
+                    <div style="font-size: 14px; color: var(--color-text-secondary);">Total USD Available</div>
+                    <div style="font-weight: 600; font-size: 20px; color: var(--color-success);">$${Utils.formatCurrency(totalActiveAmount, 'USD')}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px;">Avg Exchange Rate</div>
-                    <div style="font-weight: 600;">฿${avgExchangeRate.toFixed(2)}</div>
+                    <div style="font-size: 14px; color: var(--color-text-secondary);">Total Cost (THB)</div>
+                    <div style="font-weight: 600; font-size: 20px;">฿${Utils.formatCurrency(totalActiveCostBasis, 'THB')}</div>
                 </div>
             </div>
         </div>
+
+        <div style="overflow-x: auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Portfolio</th>
+                        <th>Account</th>
+                        <th style="text-align: right;">Amount (USD)</th>
+                        <th style="text-align: right;">Remaining</th>
+                        <th style="text-align: right;">Exchange Rate</th>
+                        <th style="text-align: right;">Cost Basis (THB)</th>
+                        <th style="text-align: center;">Status</th>
+                        <th>Used By</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
 
-    // Active Lots Section
+    lots.forEach(lot => {
+        const statusBadge = lot.status === 'OPEN'
+            ? '<span class="badge badge-success">OPEN</span>'
+            : '<span class="badge badge-secondary">CLOSED</span>';
+
+        const tx = lot.consumedByTransaction;
+        const usedBy = lot.status === 'CLOSED' && tx
+            ? `${tx.assetTicker || tx.assetName || 'Unknown'} (${Utils.formatDate(tx.date)})`
+            : '-';
+
+        const remainingDisplay = lot.status === 'OPEN'
+            ? `$${Utils.formatCurrency(lot.remainingQuantity, 'USD')}`
+            : '-';
+
+        html += `
+            <tr>
+                <td>${Utils.formatDate(lot.purchaseDate)}</td>
+                <td>${lot.portfolioName || 'Unknown'}</td>
+                <td>${lot.accountName || 'Unknown'}</td>
+                <td style="text-align: right;">$${Utils.formatCurrency(lot.quantity, 'USD')}</td>
+                <td style="text-align: right;">${remainingDisplay}</td>
+                <td style="text-align: right;">฿${lot.pricePerUnit.toFixed(2)}</td>
+                <td style="text-align: right;">฿${Utils.formatCurrency(lot.costBasisTHB, 'THB')}</td>
+                <td style="text-align: center;">${statusBadge}</td>
+                <td>${usedBy}</td>
+            </tr>
+        `;
+    });
+
     html += `
-        <div style="margin-bottom: var(--space-xl);">
-            <h4 style="margin-bottom: var(--space-md); color: var(--color-success);">Active USD Lots (OPEN)</h4>
+                </tbody>
+            </table>
+        </div>
     `;
-
-    if (activeLots.length === 0) {
-        html += `
-            <div style="padding: var(--space-lg); text-align: center; background-color: var(--color-bg-secondary); border-radius: var(--radius-md);">
-                <p style="color: var(--color-text-secondary);">No active lots found for this account.</p>
-                <p style="font-size: 14px; color: var(--color-text-secondary); margin-top: var(--space-sm);">
-                    Active lots are created when you deposit USD. They will appear here.
-                </p>
-            </div>
-        `;
-    } else {
-        html += `
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Purchase Date</th>
-                            <th style="text-align: right;">Original Amount</th>
-                            <th style="text-align: right;">Remaining</th>
-                            <th style="text-align: right;">Exchange Rate</th>
-                            <th style="text-align: right;">Cost Basis (THB)</th>
-                            <th style="text-align: center;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        activeLots.forEach(lot => {
-            const remainingCostBasis = lot.remainingQuantity * lot.pricePerUnit;
-            html += `
-                <tr>
-                    <td>${Utils.formatDate(lot.purchaseDate)}</td>
-                    <td style="text-align: right;">$${Utils.formatCurrency(lot.quantity, 'USD')}</td>
-                    <td style="text-align: right; font-weight: 600; color: var(--color-success);">$${Utils.formatCurrency(lot.remainingQuantity, 'USD')}</td>
-                    <td style="text-align: right;">฿${lot.pricePerUnit.toFixed(2)}</td>
-                    <td style="text-align: right;">฿${Utils.formatCurrency(remainingCostBasis, 'THB')}</td>
-                    <td style="text-align: center;">
-                        <span class="badge badge-success">OPEN</span>
-                    </td>
-                </tr>
-            `;
-        });
-
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
-    html += `</div>`;
-
-    // Consumed Lots Section
-    html += `
-        <div>
-            <h4 style="margin-bottom: var(--space-md); color: var(--color-text-secondary);">Consumed USD Lots (CLOSED)</h4>
-    `;
-
-    if (consumedLots.length === 0) {
-        html += `
-            <div style="padding: var(--space-lg); text-align: center; background-color: var(--color-bg-secondary); border-radius: var(--radius-md);">
-                <p style="color: var(--color-text-secondary);">No consumed lots yet.</p>
-                <p style="font-size: 14px; color: var(--color-text-secondary); margin-top: var(--space-sm);">
-                    When you purchase USD-denominated assets, lots are consumed using FIFO (First-In-First-Out) method.
-                </p>
-            </div>
-        `;
-    } else {
-        html += `
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Purchase Date</th>
-                            <th style="text-align: right;">Amount</th>
-                            <th style="text-align: right;">Exchange Rate</th>
-                            <th style="text-align: right;">Cost Basis (THB)</th>
-                            <th>Consumed By</th>
-                            <th>Transaction Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        consumedLots.forEach(lot => {
-            const tx = lot.consumedByTransaction;
-            const consumedBy = tx ?
-                `${tx.type} ${tx.assetTicker || tx.assetName || 'Unknown'} (${tx.quantity || 'N/A'})` :
-                'Unknown Transaction';
-            const txDate = tx ? Utils.formatDate(tx.date) : 'N/A';
-
-            html += `
-                <tr>
-                    <td>${Utils.formatDate(lot.purchaseDate)}</td>
-                    <td style="text-align: right;">$${Utils.formatCurrency(lot.quantity, 'USD')}</td>
-                    <td style="text-align: right;">฿${lot.pricePerUnit.toFixed(2)}</td>
-                    <td style="text-align: right;">฿${Utils.formatCurrency(lot.costBasisTHB, 'THB')}</td>
-                    <td>${consumedBy}</td>
-                    <td>${txDate}</td>
-                </tr>
-            `;
-        });
-
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-    }
-
-    html += `</div>`;
 
     content.innerHTML = html;
 }

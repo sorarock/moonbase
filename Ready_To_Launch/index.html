@@ -30,7 +30,7 @@
 <body>
     <!-- Version check and cache bypass -->
     <script>
-    const CURRENT_VERSION = '20260315001'; // Increment this on every update
+    const CURRENT_VERSION = '20260315002'; // Increment this on every update
     const storedVersion = sessionStorage.getItem('appVersion');
     if (storedVersion && storedVersion !== CURRENT_VERSION) {
         console.log('App version changed from', storedVersion, 'to', CURRENT_VERSION);
@@ -360,9 +360,12 @@
                         <p class="page-subtitle">Manage your savings accounts and track balances</p>
                     </div>
                     
-                    <div style="margin-bottom: var(--space-xl);">
+                    <div style="margin-bottom: var(--space-xl); display: flex; gap: var(--space-md);">
                         <button class="btn-primary" onclick="showCreateAccountModal()">
                             ➕ Create Account
+                        </button>
+                        <button class="btn-secondary" onclick="showFIFOLotReport()">
+                            📊 FIFO Report
                         </button>
                     </div>
 
@@ -1886,6 +1889,6 @@
     <script src="js/reports.js?v=20250308006"></script>
     <script src="js/export.js?v=20250308006"></script>
     <script src="js/import-excel.js?v=20260309009"></script>
-    <script src="js/app.js?v=20260315001"></script>
+    <script src="js/app.js?v=20260315002"></script>
 </body>
 </html>
